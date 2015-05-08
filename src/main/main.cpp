@@ -1,6 +1,6 @@
 #include <iostream>
 #include "prog_options.h"
-#include "../denoise/denoise.h"
+#include "../Denoise/Denoise.h"
 using namespace std;
 int main(int argc, char* argv[]){
 
@@ -9,7 +9,8 @@ int main(int argc, char* argv[]){
         string input = option_map["input_img"].as<string>();
         string output = option_map["output"].as<string>();
 
-        auto denoise = ITKDenoise(input, output);
+        auto denoise = Denoise();
+        denoise.Read(input);
         // #ifdef ENABLE_PARALLEL
         // int num_threads = option_map["num_threads"].as<int>();
         // auto sim = SAXSsim(input, output, num_threads);
