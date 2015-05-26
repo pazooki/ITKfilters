@@ -10,13 +10,21 @@
 #include <algorithm>
 #include <cmath>
 #include <chrono>
-//RegionGrowth
+//Filters
 #include <itkConnectedThresholdImageFilter.h>
-
+#include "itkGradientAnisotropicDiffusionImageFilter.h"
+#include <itkBinaryBallStructuringElement.h>
+#include <itkCurvatureAnisotropicDiffusionImageFilter.h>
+#include "itkGrayscaleMorphologicalOpeningImageFilter.h"
+#include "itkGrayscaleMorphologicalClosingImageFilter.h"
+#include <itkOtsuThresholdImageFilter.h>
+#include <itkHuangThresholdImageFilter.h>
+#include <itkYenThresholdImageFilter.h>
+#include <itkShanbhagThresholdImageFilter.h>
 class Denoise
 {
 public:
-    // ITK typedefs;
+    // ITK Images typedefs;
     const static unsigned int  Dimension = 2;
     typedef unsigned int       InputPixelType;
     typedef double             RealPixelType;
@@ -29,29 +37,82 @@ public:
     typedef RealImageType::Pointer RealTypeP;
     typedef ShortImageType::Pointer ShortTypeP;
     typedef ComplexImageType::Pointer ComplexTypeP;
+
+    // Region Growth
     typedef itk::ConnectedThresholdImageFilter<RealImageType, RealImageType > ConnectedFilterType;
+    typedef ConnectedFilterType::Pointer ConnectedFilterTypeP;
+
+    // Anisotropic denoise
+    typedef itk::GradientAnisotropicDiffusionImageFilter<
+        RealImageType, RealImageType> AnisotropicFilterGradientType ;
+    typedef AnisotropicFilterGradientType::Pointer AnisotropicFilterGradientTypeP;
+
+    typedef itk::CurvatureAnisotropicDiffusionImageFilter<
+        RealImageType, RealImageType> AnisotropicFilterCurvatureType ;
+    typedef AnisotropicFilterCurvatureType::Pointer AnisotropicFilterCurvatureTypeP;
+
+    // Morphology filters
+    typedef itk::BinaryBallStructuringElement< unsigned char, 2  > StructuringElementType;
+    typedef itk::GrayscaleMorphologicalOpeningImageFilter<
+        RealImageType , RealImageType, StructuringElementType >  OpeningFilterType;
+    typedef OpeningFilterType::Pointer OpeningFilterTypeP;
+
+    typedef itk::GrayscaleMorphologicalClosingImageFilter<
+        RealImageType , RealImageType, StructuringElementType >  ClosingFilterType;
+    typedef ClosingFilterType::Pointer ClosingFilterTypeP;
+
+    // Binary filters
+    typedef itk::OtsuThresholdImageFilter<Denoise::RealImageType, Denoise::InputImageType> OtsuType;
+    typedef OtsuType::Pointer OtsuTypeP;
+    typedef itk::HuangThresholdImageFilter<Denoise::RealImageType, Denoise::InputImageType> HuangType;
+    typedef HuangType::Pointer HuangTypeP;
+    typedef itk::YenThresholdImageFilter<Denoise::RealImageType, Denoise::InputImageType> YenType;
+    typedef YenType::Pointer YenTypeP;
+    typedef itk::ShanbhagThresholdImageFilter<Denoise::RealImageType, Denoise::InputImageType> ShanbhagType;
+    typedef ShanbhagType::Pointer ShanbhagTypeP;
 public:
     Denoise() = default;
     // Denoise(const std::string &imgName);
     virtual ~Denoise(){};
     InputTypeP Read(const std::string &imgName);
-    enum AnisotropicFilterID {GRADIENT = 0, CURVATURE = 1};
-    RealTypeP AnisotropicFilter(RealTypeP img,
-      const unsigned int numberOfIterations = 5, const double timeStep = 0.125 /* Recomm for 2D */ ,
-      const double conductance = 2, AnisotropicFilterID id = AnisotropicFilterID::GRADIENT);
+    void Write(RealTypeP &input, std::string &imgName);
+    void Write(InputTypeP &input, std::string &imgName);
+    void Write(RealImageType* input, std::string &imgName);
+    void Write(InputImageType* input, std::string &imgName);
 
-    RealTypeP AnisotropicFilter(InputTypeP img,
+    AnisotropicFilterGradientTypeP AnisotropicFilterGradient(RealTypeP img,
       const unsigned int numberOfIterations = 5, const double timeStep = 0.125 /* Recomm for 2D */ ,
-      const double conductance = 2, AnisotropicFilterID id = AnisotropicFilterID::GRADIENT);
+      const double conductance = 2);
+    AnisotropicFilterGradientTypeP AnisotropicFilterGradient(InputTypeP img,
+      const unsigned int numberOfIterations = 5, const double timeStep = 0.125 /* Recomm for 2D */ ,
+      const double conductance = 2 );
+    AnisotropicFilterCurvatureTypeP AnisotropicFilterCurvature(RealTypeP img,
+      const unsigned int numberOfIterations = 5, const double timeStep = 0.125 /* Recomm for 2D */ ,
+      const double conductance = 2);
+    AnisotropicFilterCurvatureTypeP AnisotropicFilterCurvature(InputTypeP img,
+      const unsigned int numberOfIterations = 5, const double timeStep = 0.125 /* Recomm for 2D */ ,
+      const double conductance = 2 );
 
-    ConnectedFilterType::Pointer RegionGrowth(RealTypeP img,
+    ConnectedFilterTypeP RegionGrowth(RealTypeP img,
             unsigned int lowThreshold, unsigned int highThreshold);
-    ConnectedFilterType::Pointer RegionGrowth(InputTypeP img,
+    ConnectedFilterTypeP RegionGrowth(InputTypeP img,
             unsigned int lowThreshold, unsigned int highThreshold);
+    OpeningFilterTypeP MorphologicalOpening(RealTypeP img, int radius);
+    OpeningFilterTypeP MorphologicalOpening(InputTypeP img, int radius);
+    ClosingFilterTypeP MorphologicalClosing(RealTypeP img, int radius);
+    ClosingFilterTypeP MorphologicalClosing(InputTypeP img, int radius);
+    OtsuTypeP BinaryOtsu(RealTypeP img);
+    OtsuTypeP BinaryOtsu(InputTypeP img);
+    HuangTypeP BinaryHuang(RealTypeP img);
+    HuangTypeP BinaryHuang(InputTypeP img);
+    YenTypeP BinaryYen(RealTypeP img);
+    YenTypeP BinaryYen(InputTypeP img);
+    ShanbhagTypeP BinaryShanbhag(RealTypeP img);
+    ShanbhagTypeP BinaryShanbhag(InputTypeP img);
 public:
    InputTypeP inputImg_;
-   RealTypeP anisotropicFilter_;
-   ConnectedFilterType::Pointer filterGrow_;
+   // AnisotropicFilterTypeP anisotropicFilter_;
+   ConnectedFilterTypeP filterGrow_;
 
 };
 #endif

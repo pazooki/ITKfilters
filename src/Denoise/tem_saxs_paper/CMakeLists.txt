@@ -7,6 +7,8 @@ target_link_libraries(tem_saxs_denoise.exe  ldenoise)
 target_link_libraries(tem_saxs_denoise.exe  ${GMOCK_LIBRARY_MAIN} ${GTEST_LIBRARY_MAIN} ${CMAKE_THREAD_LIBS_INIT})
 add_custom_command(
     TARGET tem_saxs_denoise.exe PRE_BUILD
-    COMMAND mkdir -p ${EXECUTABLE_OUTPUT_PATH}/fixturesTemSaxsPaper
-    COMMAND ln -sf /home/phc/Dropbox/Shared-Geelong-Palmerston/pectin/Pectin1_acid/pectin_1_ice_Montage_1045_12K_8_bit.tif ${EXECUTABLE_OUTPUT_PATH}/fixturesTemSaxsPaper/
+    COMMAND mkdir -p ${EXECUTABLE_OUTPUT_PATH}/resultsTemSaxsPaper
+    COMMAND ln -sf /home/phc/Dropbox/Shared-Geelong-Palmerston/pectin/Pectin1_acid/pectin_1_ice_Montage_1045_12K_8_bit.tif ${EXECUTABLE_OUTPUT_PATH}/resultsTemSaxsPaper/
+    COMMAND ln -sf /home/phc/Dropbox/Shared-Geelong-Palmerston/Carrageenan/Carrageenan_K/Montage_832.tif ${EXECUTABLE_OUTPUT_PATH}/resultsTemSaxsPaper/
+    COMMAND ln -sf /home/phc/Dropbox/Shared-Geelong-Palmerston/Carrageenan/Carrageenan_Na/Montage_851.tif ${EXECUTABLE_OUTPUT_PATH}/resultsTemSaxsPaper/
    )
