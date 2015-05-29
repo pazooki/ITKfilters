@@ -3,6 +3,7 @@
 #include "Denoise.h"
 #include <memory>
 #include <QuickView.h>
+#include "itkRandomImageSource.h"
 using namespace testing;
 using namespace std;
 
@@ -22,6 +23,84 @@ TEST(denoise, anisotropicFilterInNoise){
     auto denoise = make_shared<Denoise>() ;
     auto r = denoise->Read(img);
     denoise->AnisotropicFilterCurvature(r);
+}
+TEST(composite, StructuringElement){
+    typedef itk::FlatStructuringElement<2> FSL;
+    typedef FSL::LType lt;
+    // int objWidth = 2;
+    // itk::SizeValueType
+    // r1      = 5 + 2*objWidth;
+    // auto r2      = 5 + 2*objWidth;
+    FSL::RadiusType r;
+    r[0]=5;
+    r[1]=5;
+    FSL el;
+    el.SetRadius(r);
+    el.SetDecomposable(1);
+    float l = 3;
+    float h = 2;
+    // lt p10;
+    // p10[0] = 0;
+    // p10[1] = 0;
+    // el.AddLine(p10);
+    lt p11;
+    p11[0] = l;
+    p11[1] = 0;
+    el.AddLine(p11);
+
+    lt p20;
+    p20[0] = 0;
+    p20[1] = h;
+    el.AddLine(p20);
+    // lt p21;
+    // p21[0] = l;
+    // p21[1] = h;
+    // el.AddLine(p21);
+    el.ComputeBufferFromLines();
+
+    typedef itk::Image< unsigned char, 2 >    ImageType;
+    typedef itk::RandomImageSource<ImageType> RandomType;
+    ImageType::SizeType size;
+    size[0] = 20;
+    size[1] = 30;
+    auto image = RandomType::New();
+    image->SetSize(size);
+    image->Update();
+
+    typedef itk::GrayscaleMorphologicalOpeningImageFilter<
+        ImageType , ImageType, FSL >  OpeningFilterType;
+    auto opening = OpeningFilterType::New();
+    opening->SetKernel(el);
+    opening->SetInput(image->GetOutput());
+    opening->Update();
+    QuickView viewer;
+    viewer.AddImage(image->GetOutput());
+    viewer.AddImage(opening->GetOutput());
+
+    viewer.Visualize();
+    // auto p2 = {{0,h},{l,h}};
+    // el.Addline(p2);
+    // auto f1 = {{0,0},{0,h}};
+    // el.Addline(f1);
+    // auto f2 = {{0,l},{l,h}};
+    // el.Addline(f2);
+    // auto lines = el.GetLines();
+    // std::cout << lines[0][0] << " " << lines[0][1] << "; " << lines[1][0] <<" " <<lines[1][1] <<";" <<lines[2][0] << " " << lines[2][1] << ";" << lines[3][0] << " " << lines[3][1] << ";" << lines[4][0] << " " << lines[4][1] << endl;
+
+    // for(int j=0; j<this->Size(); j++ )
+    // {
+    //     if( this->GetElement( j ) )
+    //     {
+    //         image->SetPixel( centerIdx+this->GetOffset( j ), foreground );
+    //     }
+    //     else
+    //     {
+    //         image->SetPixel( centerIdx+this->GetOffset( j ), background );
+    //     }
+    // }
+    //
+    // return image;
+
 }
 
 TEST(denoise, anisotropicFilterInPectinSubSet){

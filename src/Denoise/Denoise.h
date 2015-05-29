@@ -14,6 +14,7 @@
 #include <itkConnectedThresholdImageFilter.h>
 #include "itkGradientAnisotropicDiffusionImageFilter.h"
 #include <itkBinaryBallStructuringElement.h>
+#include <itkFlatStructuringElement.h>
 #include <itkCurvatureAnisotropicDiffusionImageFilter.h>
 #include "itkGrayscaleMorphologicalOpeningImageFilter.h"
 #include "itkGrayscaleMorphologicalClosingImageFilter.h"
