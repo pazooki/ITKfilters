@@ -1,12 +1,12 @@
-SET( OpenCV_LIBS ${OpenCV_LIBS} PARENT_SCOPE )
 SET( ITK_LIBRARIES ${ITK_LIBRARIES} PARENT_SCOPE )
 SET( Boost_LIBRARIES ${Boost_LIBRARIES} PARENT_SCOPE )
 
 add_library(ldenoise STATIC Denoise.cpp)
-target_link_libraries(ldenoise ${Boost_LIBRARIES} ${OpenCV_LIBS})
+target_link_libraries(ldenoise ${Boost_LIBRARIES})
 target_link_libraries(ldenoise ${ITK_LIBRARIES} )
+add_library(lFlatStructuringElementWithImageBridge STATIC itkFlatStructuringElementWithImageBridge.h itkFlatStructuringElementWithImageBridge.hxx)
+target_link_libraries(lFlatStructuringElementWithImageBridge ${ITK_LIBRARIES} )
 
-message(status "** OpenCV Libraries: ${OpenCV_LIBS}")
 message(status "** ITK Libraries: ${ITK_LIBRARIES}")
 message(status "** Boost Libraries: ${Boost_LIBRARIES}")
 
