@@ -1,6 +1,15 @@
-#include "Denoise.h"
 #include "gmock/gmock.h"
+#include "../test/prog_options_test.h"
 #include <memory>
+
+bool VFLAG;
+int main(int argc, char** argv) {
+    ::testing::InitGoogleTest(&argc, argv);
+    auto option_map = program_options(argc, argv);
+    VFLAG = option_map["visualize"].as<bool>();
+    return RUN_ALL_TESTS();
+}
+#include "Denoise.h"
 #include <QuickView.h>
 #include <itkImageRegionIterator.h>
 #include <itkImageRegionConstIterator.h>
@@ -8,101 +17,9 @@
 #include <algorithm>
 #include <itkPasteImageFilter.h>
 #include <itkExtractImageFilter.h>
+#include "itkFlatStructuringElementWithImageBridge.h"
 using namespace testing;
 using namespace std;
-TEST(binary, pectin1M1045BinaryGlobal) {
-    const string img{"./resultsTemSaxsPaper/pectin1_1045_homogeneous.tif"};
-    auto denoise = make_shared<Denoise>() ;
-    auto r = denoise->Read(img);
-
-    auto d1 = denoise->AnisotropicFilterCurvature(r, 5, 0.044, 5);
-    auto mo3 = denoise->MorphologicalOpening(d1->GetOutput(), 3);
-    auto d2 = denoise->AnisotropicFilterCurvature(mo3->GetOutput(), 10, 0.044, 3);
-    auto bOtsu = denoise->BinaryOtsu(d2->GetOutput());
-    auto moBinary = denoise->MorphologicalOpening(bOtsu->GetOutput(), 4);
-    auto mcBinary = denoise->MorphologicalClosing(moBinary->GetOutput(), 4);
-    // auto bHuang = denoise->BinaryHuang(d2);
-    // auto bYen = denoise->BinaryHuang(d2);
-    // auto bShanbhag = denoise->BinaryShanbhag(d2);
-    QuickView viewer;
-    viewer.AddImage(r.GetPointer(), 1, img);
-    viewer.AddImage(d1->GetOutput(), 1, "Denoised");
-    viewer.AddImage(mo3->GetOutput(), 1, "Morphological Opening, r=3");
-    viewer.AddImage(d2->GetOutput(), 1, "Opening+Denoised, r=3");
-    viewer.AddImage(bOtsu->GetOutput(), 1, "BinaryOtsu Denoised+Opening+Denoised");
-    viewer.AddImage(moBinary->GetOutput(), 1, "Binary Opened r=4");
-    // viewer.AddImage(bHuang.GetPointer(), 1, "BinaryHuang Denoised+Opening+Denoised");
-    // viewer.AddImage(bYen.GetPointer(), 1, "BinaryYen Denoised+Opening+Denoised");
-    // viewer.AddImage(bShanbhag.GetPointer(), 1, "BinaryShanbhag Denoised+Opening+Denoised");
-
-    string outFile = "./resultsTemSaxsPaper/pectin1_1045_homogeneous_binarized.tif";
-    denoise->Write(bOtsu->GetOutput(),outFile);
-    outFile = "./resultsTemSaxsPaper/pectin1_1045_homogeneous_binarized_opened_closed.tif";
-    denoise->Write(mcBinary->GetOutput(),outFile);
-    viewer.Visualize();
-}
-
-TEST(binary, pectin1M1045BinaryRegions) {
-    const string img{"./resultsTemSaxsPaper/pectin1_1045_homogeneous.tif"};
-    auto denoise = make_shared<Denoise>() ;
-    auto r = denoise->Read(img);
-    // Set Region
-    Denoise::InputImageType::RegionType region;
-    Denoise::InputImageType::SizeType blockSize;
-    auto imgSize = denoise->inputImg_->GetLargestPossibleRegion().GetSize();
-    int Nimages    = 5;
-    blockSize[0]   = imgSize[0]/Nimages;
-    blockSize[1]   = imgSize[1]/Nimages;
-    region.SetSize(blockSize);
-    Denoise::InputImageType::IndexType indexStart;
-    typedef itk::CastImageFilter< Denoise::InputImageType, Denoise::RealImageType > CastFilterType;
-    auto cloneFilter = CastFilterType::New();
-    cloneFilter->SetInput(r);
-    cloneFilter->Update();
-    Denoise::RealImageType::Pointer clone = cloneFilter->GetOutput();
-    typedef itk::PasteImageFilter <Denoise::RealImageType, Denoise::RealImageType >  PasteImageFilterType;
-    typedef itk::ExtractImageFilter< Denoise::InputImageType, Denoise::RealImageType > ExtractFilterType;
-    for (int i = 0; i < Nimages ; i++){
-        for (int j = 0; j < Nimages ; j++){
-
-            indexStart[0] = blockSize[0] * i;
-            indexStart[1] = blockSize[1] * j;
-            region.SetIndex(indexStart);
-            auto crop = ExtractFilterType::New();
-            crop->SetExtractionRegion(region);
-            crop->SetInput(r);
-            crop->Update();
-            auto d1 = denoise->AnisotropicFilterCurvature(crop->GetOutput(), 5, 0.044, 5);
-            auto mo3 = denoise->MorphologicalOpening(d1->GetOutput(), 3);
-            auto d2 = denoise->AnisotropicFilterCurvature(mo3->GetOutput(), 10, 0.044, 3);
-            auto bHuang = denoise->BinaryOtsu(d2->GetOutput());
-            auto moB = denoise->MorphologicalOpening(bHuang->GetOutput(), 4);
-            auto mocB = denoise->MorphologicalClosing(moB->GetOutput(), 2);
-            mocB->Update();
-            // cout << "beforePaste " << i << " " << j << endl;
-            // auto s = mocB->GetOutput()->GetLargestPossibleRegion().GetSize();
-            // cout << s[0] << s[1] << endl;
-            // s = clone->GetLargestPossibleRegion().GetSize();
-            // cout << s[0] << s[1] << endl;
-            PasteImageFilterType::Pointer pasteFilter = PasteImageFilterType::New();
-            pasteFilter->SetSourceImage(mocB->GetOutput());
-            pasteFilter->SetDestinationImage(clone);
-            pasteFilter->SetSourceRegion(mocB->GetOutput()->GetLargestPossibleRegion());
-            pasteFilter->SetDestinationIndex(indexStart);
-            pasteFilter->Update();
-            clone = pasteFilter->GetOutput();
-            clone->DisconnectPipeline();
-            // cout << "afterPaste " << i << " " << j <<endl;
-            // s = mocB->GetOutput()->GetLargestPossibleRegion().GetSize();
-            // cout << s[0] << s[1] << endl;
-            // s = clone->GetLargestPossibleRegion().GetSize();
-            // cout << s[0] << s[1] << endl;
-        }
-    }
-    string outFile = "./resultsTemSaxsPaper/pectin1_1045_binary_local.tif";
-    denoise->Write(clone,outFile);
-}
-
 TEST(homogenous, pectin1M1045){
     const string img{"./resultsTemSaxsPaper/pectin_1_ice_Montage_1045_12K_8_bit.tif"};
     auto denoise = make_shared<Denoise>();
@@ -178,7 +95,6 @@ TEST(homogenous, pectin1M1045){
             {
                 val  = iter.Get();
                 nval = val / correctFactor[i*Nimages + j];
-                // cout << nval << endl;
                 iter.Set(nval);
                 ++iter;
             }
@@ -189,11 +105,94 @@ TEST(homogenous, pectin1M1045){
 
 }
 
+TEST(binary, pectin1M1045BinaryGlobal) {
+    const string img{"./resultsTemSaxsPaper/pectin1_1045_homogeneous.tif"};
+    auto denoise = make_shared<Denoise>() ;
+    auto r = denoise->Read(img);
+
+    auto d1 = denoise->AnisotropicFilterCurvature(r, 5, 0.044, 5);
+    auto mo3 = denoise->MorphologicalOpening(d1->GetOutput(), 3);
+    auto d2 = denoise->AnisotropicFilterCurvature(mo3->GetOutput(), 10, 0.044, 3);
+    auto bOtsu = denoise->BinaryOtsu(d2->GetOutput());
+    auto moBinary = denoise->MorphologicalOpening(bOtsu->GetOutput(), 4);
+    auto mcBinary = denoise->MorphologicalClosing(moBinary->GetOutput(), 4);
+    // auto bHuang = denoise->BinaryHuang(d2);
+    // auto bYen = denoise->BinaryHuang(d2);
+    // auto bShanbhag = denoise->BinaryShanbhag(d2);
+    QuickView viewer;
+    viewer.AddImage(r.GetPointer(), 1, img);
+    viewer.AddImage(d1->GetOutput(), 1, "Denoised");
+    viewer.AddImage(mo3->GetOutput(), 1, "Morphological Opening, r=3");
+    viewer.AddImage(d2->GetOutput(), 1, "Opening+Denoised, r=3");
+    viewer.AddImage(bOtsu->GetOutput(), 1, "BinaryOtsu Denoised+Opening+Denoised");
+    viewer.AddImage(moBinary->GetOutput(), 1, "Binary Opened r=4");
+    // viewer.AddImage(bHuang.GetPointer(), 1, "BinaryHuang Denoised+Opening+Denoised");
+    // viewer.AddImage(bYen.GetPointer(), 1, "BinaryYen Denoised+Opening+Denoised");
+    // viewer.AddImage(bShanbhag.GetPointer(), 1, "BinaryShanbhag Denoised+Opening+Denoised");
+
+    string outFile = "./resultsTemSaxsPaper/pectin1_1045_homogeneous_binarized.tif";
+    denoise->Write(bOtsu->GetOutput(),outFile);
+    outFile = "./resultsTemSaxsPaper/pectin1_1045_homogeneous_binarized_opened_closed.tif";
+    denoise->Write(mcBinary->GetOutput(),outFile);
+    if (VFLAG) viewer.Visualize();
+}
+
+TEST(binary, pectin1M1045BinaryRegions) {
+    const string img{"./resultsTemSaxsPaper/pectin1_1045_homogeneous.tif"};
+    auto denoise = make_shared<Denoise>() ;
+    auto r = denoise->Read(img);
+    // Set Region
+    Denoise::InputImageType::RegionType region;
+    Denoise::InputImageType::SizeType blockSize;
+    auto imgSize = denoise->inputImg_->GetLargestPossibleRegion().GetSize();
+    int Nimages    = 5;
+    blockSize[0]   = imgSize[0]/Nimages;
+    blockSize[1]   = imgSize[1]/Nimages;
+    region.SetSize(blockSize);
+    Denoise::InputImageType::IndexType indexStart;
+    typedef itk::CastImageFilter< Denoise::InputImageType, Denoise::RealImageType > CastFilterType;
+    auto cloneFilter = CastFilterType::New();
+    cloneFilter->SetInput(r);
+    cloneFilter->Update();
+    Denoise::RealImageType::Pointer clone = cloneFilter->GetOutput();
+    typedef itk::PasteImageFilter <Denoise::RealImageType, Denoise::RealImageType >  PasteImageFilterType;
+    typedef itk::ExtractImageFilter< Denoise::InputImageType, Denoise::RealImageType > ExtractFilterType;
+    for (int i = 0; i < Nimages ; i++){
+        for (int j = 0; j < Nimages ; j++){
+
+            indexStart[0] = blockSize[0] * i;
+            indexStart[1] = blockSize[1] * j;
+            region.SetIndex(indexStart);
+            auto crop = ExtractFilterType::New();
+            crop->SetExtractionRegion(region);
+            crop->SetInput(r);
+            crop->Update();
+            auto d1 = denoise->AnisotropicFilterCurvature(crop->GetOutput(), 5, 0.044, 5);
+            auto mo3 = denoise->MorphologicalOpening(d1->GetOutput(), 3);
+            auto d2 = denoise->AnisotropicFilterCurvature(mo3->GetOutput(), 10, 0.044, 3);
+            auto bHuang = denoise->BinaryOtsu(d2->GetOutput());
+            auto moB = denoise->MorphologicalOpening(bHuang->GetOutput(), 4);
+            auto mocB = denoise->MorphologicalClosing(moB->GetOutput(), 2);
+            mocB->Update();
+            PasteImageFilterType::Pointer pasteFilter = PasteImageFilterType::New();
+            pasteFilter->SetSourceImage(mocB->GetOutput());
+            pasteFilter->SetDestinationImage(clone);
+            pasteFilter->SetSourceRegion(mocB->GetOutput()->GetLargestPossibleRegion());
+            pasteFilter->SetDestinationIndex(indexStart);
+            pasteFilter->Update();
+            clone = pasteFilter->GetOutput();
+            clone->DisconnectPipeline();
+        }
+    }
+    string outFile = "./resultsTemSaxsPaper/pectin1_1045_binary_local.tif";
+    denoise->Write(clone,outFile);
+}
+
+
 TEST(homogeneous, pectin1M1045PlusDenoise) {
     const string img{"./resultsTemSaxsPaper/pectin1_1045_homogeneous.tif"};
     auto denoise = make_shared<Denoise>() ;
     auto r = denoise->Read(img);
-    // Visualize
     QuickView viewer;
     viewer.AddImage(r.GetPointer(), 1, img);
 
@@ -207,14 +206,13 @@ TEST(homogeneous, pectin1M1045PlusDenoise) {
     viewer.AddImage( out3->GetOutput(), 1 , "Anisotropic Filterx3");
     string outFile = "./resultsTemSaxsPaper/pectin1_1045_homogeneous_denoised.tif";
     denoise->Write(out3->GetOutput(),outFile);
-    // viewer.Visualize();
+    if (VFLAG) viewer.Visualize();
 }
 
 TEST(denoise, pectin1M1045){
     const string img{"./resultsTemSaxsPaper/pectin_1_ice_Montage_1045_12K_8_bit.tif"};
     auto denoise = make_shared<Denoise>() ;
     auto r = denoise->Read(img);
-    // Visualize
     QuickView viewer;
     viewer.AddImage(r.GetPointer(), 1, img);
 
@@ -228,14 +226,13 @@ TEST(denoise, pectin1M1045){
     viewer.AddImage( out3->GetOutput(), 1 , "Anisotropic Filterx3");
     string outFile = "./resultsTemSaxsPaper/pectin1_1045_denoised.tif";
     denoise->Write(out3->GetOutput(),outFile);
-    viewer.Visualize();
+    if (VFLAG) viewer.Visualize();
 }
 
 TEST(denoise, carrageenanK832){
     const string img{"./resultsTemSaxsPaper/Montage_832.tif"};
     auto denoise = make_shared<Denoise>() ;
     auto r = denoise->Read(img);
-    // Visualize
     QuickView viewer;
     viewer.AddImage(r.GetPointer(), 1, img);
 
@@ -247,7 +244,7 @@ TEST(denoise, carrageenanK832){
 
     auto out3 = denoise->AnisotropicFilterCurvature(out2->GetOutput(), 10, 0.044, 2);
     viewer.AddImage( out3->GetOutput(), 1 , "Anisotropic Filterx3");
-    // viewer.Visualize();
+    if (VFLAG) viewer.Visualize();
     string outFile = "./resultsTemSaxsPaper/CaKMontage832_denoised.tif";
     denoise->Write(out3->GetOutput(),outFile);
 }
@@ -256,7 +253,6 @@ TEST(denoise, carrageenanNa851){
     const string img{"./resultsTemSaxsPaper/Montage_851.tif"};
     auto denoise = make_shared<Denoise>() ;
     auto r = denoise->Read(img);
-    // Visualize
     QuickView viewer;
     viewer.AddImage(r.GetPointer(), 1, img);
 
@@ -268,11 +264,33 @@ TEST(denoise, carrageenanNa851){
 
     auto out3 = denoise->AnisotropicFilterCurvature(out2->GetOutput(), 10, 0.044, 2);
     viewer.AddImage( out3->GetOutput(), 1 , "Anisotropic Filterx3");
-    // viewer.Visualize();
+    if (VFLAG) viewer.Visualize();
     string outFile = "./resultsTemSaxsPaper/CaNaMontage851_denoised.tif";
     denoise->Write(out3->GetOutput(),outFile);
 }
 
+TEST(morphological, flatStructuringElement){
+
+    auto readKernel = make_shared<Denoise>() ;
+    typedef itk::FlatStructuringElementWithImageBridge<2, Denoise::InputImageType> FlatSEBridgeType;
+
+    const string kernelImg{"./fixtures/cyld3.png"};
+    auto kernelI = readKernel->Read(kernelImg);
+    auto fseBridge = FlatSEBridgeType::FromImage(kernelI);
+    FlatSEBridgeType::Superclass * flatStructureP = &fseBridge;
+
+    auto denoise = make_shared<Denoise>() ;
+    const string inputImg{"./resultsTemSaxsPaper/pectin1_1045_homogeneous_binarized_opened_closed.tif"};
+    auto inputI = denoise->Read(inputImg);
+    auto openF   = denoise->MorphologicalOpening(inputI, *flatStructureP);
+    auto closeF   = denoise->MorphologicalClosing(inputI, *flatStructureP);
+    QuickView viewer;
+    viewer.AddImage(inputI.GetPointer());
+    viewer.AddImage(kernelI.GetPointer());
+    viewer.AddImage(openF->GetOutput());
+    viewer.AddImage(closeF->GetOutput());
+    if (VFLAG) viewer.Visualize();
+}
 // TEST(binary, pectin1M1045BinaryOpenCloseOpen){
 //     const string img{"./resultsTemSaxsPaper/pectin1_1045_homogeneous.tif"};
 //     auto denoise = make_shared<Denoise>() ;
@@ -296,8 +314,7 @@ TEST(denoise, carrageenanNa851){
 //     viewer.AddImage(mcB.GetPointer(), 1, "Huang ... + Closing");
 //     viewer.AddImage(mocB.GetPointer(), 1, "Huang ... + Opening + Closing");
 //     viewer.AddImage(mcoB.GetPointer(), 1, "Huang ... + Closing + Opening");
-//     viewer.Visualize();
 //     string outFile = "./resultsTemSaxsPaper/pectin1_1045_binaryHuangCloseOpen.tif";
 //     denoise->Write(mcoB,outFile);
-//     // viewer.Visualize();
+//     if (VFLAG) viewer.Visualize();
 // }

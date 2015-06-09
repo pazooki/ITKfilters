@@ -21,7 +21,8 @@ namespace itk {
  */
 
 template<unsigned int VDimension, typename TImageType>
-class FlatStructuringElementWithImageBridge:private FlatStructuringElement<VDimension> {
+class FlatStructuringElementWithImageBridge:
+    public FlatStructuringElement<VDimension> {
 public:
   /** Standard class typedefs. */
   typedef FlatStructuringElementWithImageBridge< VDimension, TImageType > Self;

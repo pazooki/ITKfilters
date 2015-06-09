@@ -23,7 +23,7 @@ TEST(ImageBridge, constructor){
     typedef itk::ImageFileReader< ImageType > ReaderType;
     auto reader = ReaderType::New();
 
-    string inputName = "./fixtures/cylv2.png";
+    string inputName = "./fixtures/cyld3.png";
     reader->SetFileName( inputName );
     try {
        reader->Update();

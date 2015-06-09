@@ -39,11 +39,15 @@ public:
     typedef ShortImageType::Pointer ShortTypeP;
     typedef ComplexImageType::Pointer ComplexTypeP;
 
-    // Region Growth
+    /**********************************************************/
+    /*******Region Growth********/
+    /**********************************************************/
     typedef itk::ConnectedThresholdImageFilter<RealImageType, RealImageType > ConnectedFilterType;
     typedef ConnectedFilterType::Pointer ConnectedFilterTypeP;
 
-    // Anisotropic denoise
+    /**********************************************************/
+    /*******Anistropic Denoise********/
+    /**********************************************************/
     typedef itk::GradientAnisotropicDiffusionImageFilter<
         RealImageType, RealImageType> AnisotropicFilterGradientType ;
     typedef AnisotropicFilterGradientType::Pointer AnisotropicFilterGradientTypeP;
@@ -52,17 +56,30 @@ public:
         RealImageType, RealImageType> AnisotropicFilterCurvatureType ;
     typedef AnisotropicFilterCurvatureType::Pointer AnisotropicFilterCurvatureTypeP;
 
-    // Morphology filters
-    typedef itk::BinaryBallStructuringElement< unsigned char, 2  > StructuringElementType;
+    /**********************************************************/
+    /*******Morphological Operations********/
+    /**********************************************************/
+    // Ball
+    typedef itk::BinaryBallStructuringElement< unsigned char, 2  > BallStructuringElementType;
     typedef itk::GrayscaleMorphologicalOpeningImageFilter<
-        RealImageType , RealImageType, StructuringElementType >  OpeningFilterType;
-    typedef OpeningFilterType::Pointer OpeningFilterTypeP;
+        RealImageType , RealImageType, BallStructuringElementType >  BallOpeningFilterType;
+    typedef BallOpeningFilterType::Pointer BallOpeningFilterTypeP;
 
     typedef itk::GrayscaleMorphologicalClosingImageFilter<
-        RealImageType , RealImageType, StructuringElementType >  ClosingFilterType;
-    typedef ClosingFilterType::Pointer ClosingFilterTypeP;
+        RealImageType , RealImageType, BallStructuringElementType >  BallClosingFilterType;
+    typedef BallClosingFilterType::Pointer BallClosingFilterTypeP;
+    // Generic FlatStructure
+    typedef itk::FlatStructuringElement< 2 > FlatStructuringElementType;
+    typedef itk::GrayscaleMorphologicalOpeningImageFilter<
+        RealImageType , RealImageType, FlatStructuringElementType >  FlatOpeningFilterType;
+    typedef FlatOpeningFilterType::Pointer FlatOpeningFilterTypeP;
+    typedef itk::GrayscaleMorphologicalClosingImageFilter<
+        RealImageType , RealImageType, FlatStructuringElementType >  FlatClosingFilterType;
+    typedef FlatClosingFilterType::Pointer FlatClosingFilterTypeP;
 
-    // Binary filters
+    /**********************************************************/
+    /*******Binary Filters********/
+    /**********************************************************/
     typedef itk::OtsuThresholdImageFilter<Denoise::RealImageType, Denoise::InputImageType> OtsuType;
     typedef OtsuType::Pointer OtsuTypeP;
     typedef itk::HuangThresholdImageFilter<Denoise::RealImageType, Denoise::InputImageType> HuangType;
@@ -71,6 +88,7 @@ public:
     typedef YenType::Pointer YenTypeP;
     typedef itk::ShanbhagThresholdImageFilter<Denoise::RealImageType, Denoise::InputImageType> ShanbhagType;
     typedef ShanbhagType::Pointer ShanbhagTypeP;
+
 public:
     Denoise() = default;
     // Denoise(const std::string &imgName);
@@ -98,10 +116,14 @@ public:
             unsigned int lowThreshold, unsigned int highThreshold);
     ConnectedFilterTypeP RegionGrowth(InputTypeP img,
             unsigned int lowThreshold, unsigned int highThreshold);
-    OpeningFilterTypeP MorphologicalOpening(RealTypeP img, int radius);
-    OpeningFilterTypeP MorphologicalOpening(InputTypeP img, int radius);
-    ClosingFilterTypeP MorphologicalClosing(RealTypeP img, int radius);
-    ClosingFilterTypeP MorphologicalClosing(InputTypeP img, int radius);
+    BallOpeningFilterTypeP MorphologicalOpening(RealTypeP img, int radius);
+    BallOpeningFilterTypeP MorphologicalOpening(InputTypeP img, int radius);
+    BallClosingFilterTypeP MorphologicalClosing(RealTypeP img, int radius);
+    BallClosingFilterTypeP MorphologicalClosing(InputTypeP img, int radius);
+    FlatOpeningFilterTypeP MorphologicalOpening(RealTypeP img, FlatStructuringElementType& structure );
+    FlatOpeningFilterTypeP MorphologicalOpening(InputTypeP img, FlatStructuringElementType& structure);
+    FlatClosingFilterTypeP MorphologicalClosing(RealTypeP img, FlatStructuringElementType& structure);
+    FlatClosingFilterTypeP MorphologicalClosing(InputTypeP img, FlatStructuringElementType& structure);
     OtsuTypeP BinaryOtsu(RealTypeP img);
     OtsuTypeP BinaryOtsu(InputTypeP img);
     HuangTypeP BinaryHuang(RealTypeP img);

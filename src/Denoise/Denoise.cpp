@@ -5,6 +5,10 @@
 #include <itkCastImageFilter.h>
 using namespace std;
 
+/**********************************************************/
+/*******FILE MANAGEMENT********/
+/**********************************************************/
+
 Denoise::InputTypeP Denoise::Read(const string &inputName){
     // Reader
     typedef itk::ImageFileReader< InputImageType > ReaderType;
@@ -83,6 +87,9 @@ void Denoise::Write(Denoise::InputTypeP &input, std::string &imgName){
 
     Write(input.GetPointer(), imgName);
 }
+/**********************************************************/
+/*******ANISOTROPIC FILTERS********/
+/**********************************************************/
 
 Denoise::AnisotropicFilterGradientTypeP Denoise::AnisotropicFilterGradient(Denoise::RealTypeP img,
         const unsigned int numberOfIterations, const double timeStep, const double conductance)
@@ -140,6 +147,9 @@ Denoise::AnisotropicFilterCurvatureTypeP Denoise::AnisotropicFilterCurvature(Den
     return AnisotropicFilterCurvature(filter->GetOutput(),
                 numberOfIterations,timeStep, conductance);
 }
+/**********************************************************/
+/*******REGION GROWTH********/
+/**********************************************************/
 
 Denoise::ConnectedFilterTypeP Denoise::RegionGrowth(Denoise::RealTypeP img,
                     unsigned int lth, unsigned int hth)
@@ -163,75 +173,95 @@ Denoise::ConnectedFilterTypeP Denoise::RegionGrowth(Denoise::InputTypeP img,
     return RegionGrowth(filter->GetOutput(),
                 lth,hth);
 }
-Denoise::OpeningFilterTypeP Denoise::MorphologicalOpening(Denoise::RealTypeP img, int radius){
+/**********************************************************/
+/*******MORPHOLOGICAL FILTERS********/
+/**********************************************************/
+/** OPENING */
+Denoise::BallOpeningFilterTypeP Denoise::MorphologicalOpening(Denoise::RealTypeP img, int radius){
 
-    // structuring element
-    typedef itk::BinaryBallStructuringElement<
-        unsigned char, 2  > StructuringElementType;
-    // define the opening type
-    typedef itk::GrayscaleMorphologicalOpeningImageFilter<
-        RealImageType , RealImageType, StructuringElementType >  OpeningFilterType;
     // Create structuring element
-    StructuringElementType  structuringElement;
+    BallStructuringElementType  structuringElement;
     structuringElement.SetRadius(radius);
     structuringElement.CreateStructuringElement();
     // Opening filter
-    auto opening = OpeningFilterType::New();
+    auto opening = BallOpeningFilterType::New();
     opening->SetKernel(structuringElement);
     opening->SetInput(img);
 //    opening->Update();
     return opening;
 }
-Denoise::OpeningFilterTypeP Denoise::MorphologicalOpening(Denoise::InputTypeP img, int radius){
+Denoise::BallOpeningFilterTypeP Denoise::MorphologicalOpening(Denoise::InputTypeP img, int radius){
 
     typedef itk::CastImageFilter< Denoise::InputImageType, Denoise::RealImageType > CastFilterType;
     auto filter = CastFilterType::New();
     filter->SetInput(img);
     filter->Update();
     return MorphologicalOpening(filter->GetOutput(), radius);
-    // typedef itk::CastImageFilter< Denoise::RealImageType, Denoise::InputImageType > CastFilterTypeInverse;
-    // auto filterInv = CastFilterTypeInverse::New();
-    // // InputImageType i = *img->Clone();
-    // filterInv->SetInput(mo);
-    // filterInv->Update();
-    // return filterInvGetOutput();
 
 }
 
-Denoise::ClosingFilterTypeP Denoise::MorphologicalClosing(Denoise::RealTypeP img, int radius){
+Denoise::FlatOpeningFilterTypeP Denoise::MorphologicalOpening(Denoise::RealTypeP img, itk::FlatStructuringElement<2>& structuringElement){
 
-    // structuring element
-    typedef itk::BinaryBallStructuringElement<
-        unsigned char, 2  > StructuringElementType;
-    // define the opening type
-    typedef itk::GrayscaleMorphologicalClosingImageFilter<
-        RealImageType , RealImageType, StructuringElementType >  ClosingFilterType;
-    // Create structuring element
-    StructuringElementType  structuringElement;
-    structuringElement.SetRadius(radius);
-    structuringElement.CreateStructuringElement();
-    // Closing filter
-    auto opening = ClosingFilterType::New();
+    // Opening filter
+    auto opening = FlatOpeningFilterType::New();
     opening->SetKernel(structuringElement);
     opening->SetInput(img);
 //    opening->Update();
     return opening;
 }
-Denoise::ClosingFilterTypeP Denoise::MorphologicalClosing(Denoise::InputTypeP img, int radius){
+Denoise::FlatOpeningFilterTypeP Denoise::MorphologicalOpening(Denoise::InputTypeP img, itk::FlatStructuringElement<2>& structuringElement){
+
+    typedef itk::CastImageFilter< Denoise::InputImageType, Denoise::RealImageType > CastFilterType;
+    auto filter = CastFilterType::New();
+    filter->SetInput(img);
+    filter->Update();
+    return MorphologicalOpening(filter->GetOutput(), structuringElement);
+
+}
+/** CLOSING */
+Denoise::BallClosingFilterTypeP Denoise::MorphologicalClosing(Denoise::RealTypeP img, int radius){
+
+    // Create structuring element
+    BallStructuringElementType  structuringElement;
+    structuringElement.SetRadius(radius);
+    structuringElement.CreateStructuringElement();
+    // Closing filter
+    auto closing = BallClosingFilterType::New();
+    closing->SetKernel(structuringElement);
+    closing->SetInput(img);
+//    opening->Update();
+    return closing;
+}
+
+Denoise::BallClosingFilterTypeP Denoise::MorphologicalClosing(Denoise::InputTypeP img, int radius){
 
     typedef itk::CastImageFilter< Denoise::InputImageType, Denoise::RealImageType > CastFilterType;
     auto filter = CastFilterType::New();
     filter->SetInput(img);
     filter->Update();
     return MorphologicalClosing(filter->GetOutput(), radius);
-    // typedef itk::CastImageFilter< Denoise::RealImageType, Denoise::InputImageType > CastFilterTypeInverse;
-    // auto filterInv = CastFilterTypeInverse::New();
-    // // InputImageType i = *img->Clone();
-    // filterInv->SetInput(mo);
-    // filterInv->Update();
-    // return filterInv->GetOutput();
+}
+Denoise::FlatClosingFilterTypeP Denoise::MorphologicalClosing(Denoise::RealTypeP img, itk::FlatStructuringElement<2>& structuringElement){
+
+    auto closing = FlatClosingFilterType::New();
+    closing->SetKernel(structuringElement);
+    closing->SetInput(img);
+//    closing->Update();
+    return closing;
+}
+Denoise::FlatClosingFilterTypeP Denoise::MorphologicalClosing(Denoise::InputTypeP img, itk::FlatStructuringElement<2>& structuringElement){
+
+    typedef itk::CastImageFilter< Denoise::InputImageType, Denoise::RealImageType > CastFilterType;
+    auto filter = CastFilterType::New();
+    filter->SetInput(img);
+    filter->Update();
+    return MorphologicalClosing(filter->GetOutput(), structuringElement);
 
 }
+/**********************************************************/
+/*******BINARY FILTERS********/
+/**********************************************************/
+
 Denoise::OtsuTypeP Denoise::BinaryOtsu(Denoise::RealTypeP img){
     typedef itk::OtsuThresholdImageFilter<Denoise::RealImageType, Denoise::InputImageType> OtsuType;
     auto b = OtsuType::New();
