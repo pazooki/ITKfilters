@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.9)
+cmake_minimum_required(VERSION 2.8.12)
 set(CMAKE_ECLIPSE_VERSION=4.4)
 # cmake ../src  -G"Eclipse CDT4 - Unix Makefiles" -DCMAKE_BUILD_TYPE=Release -DCMAKE_ECLIPSE_GENERATE_SOURCE_PROJECT=TRUE
 cmake_policy(SET CMP0012 NEW) # TO avoid ipcv lib error
@@ -11,10 +11,6 @@ set(CMAKE_INCLUDE_CURRENT_DIR ON)
 SET(EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR})
 SET(LIBRARY_OUTPUT_PATH ${PROJECT_BINARY_DIR}/lib)
 SET(ARCHIVE_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/lib)
-find_package(OpenCV)
-include_directories( ${OpenCV_INCLUDE_DIRS})
-message(status "** OpenCV Libraries: ${OpenCV_LIBRARIES}")
-message(status "** OpenCV Includes: ${OpenCV_INCLUDE_DIRS}")
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 find_package(ITK REQUIRED)
@@ -23,7 +19,7 @@ include(${ITK_USE_FILE})
 message(status "** ITK Libraries:  ${ITK_LIBRARIES}")
 message(status "** ITK Includes:  ${ITK_INCLUDE_DIRS}")
 
-find_package(Boost 1.57.0 COMPONENTS
+find_package(Boost 1.54.0 COMPONENTS
         system filesystem
         program_options
         serialization
@@ -44,6 +40,7 @@ IF(ENABLE_PARALLEL)
 ENDIF(ENABLE_PARALLEL)
 add_subdirectory(main)
 add_subdirectory(Denoise)
+add_subdirectory(Skeleton)
 set(ENABLE_PARALLEL "ON" CACHE BOOL "Enable to use openMP")
 # TEST
 ### Google TEST AND MOCK
@@ -52,6 +49,8 @@ set(ENABLE_PARALLEL "ON" CACHE BOOL "Enable to use openMP")
 set(ENABLE_GOOGLE_TEST "ON" CACHE BOOL "Requires ENV variable GMOCK_HOME pointing to gmock parent folder")
 
 IF(ENABLE_GOOGLE_TEST)
+    file(COPY "./fixtures" DESTINATION ${EXECUTABLE_OUTPUT_PATH} )
+
     set(GMOCK_HOME "$ENV{GMOCK_HOME}" CACHE PATH "Set this to gmock parent folder")
     #FIND GMOCK
     find_path(GTEST_INCLUDE_DIR

@@ -17,7 +17,7 @@ int main(int argc, char** argv) {
 #include <algorithm>
 #include <itkPasteImageFilter.h>
 #include <itkExtractImageFilter.h>
-#include "itkFlatStructuringElementWithImageBridge.h"
+#include <itkMinimumMaximumImageCalculator.h>
 using namespace testing;
 using namespace std;
 TEST(homogenous, pectin1M1045){
@@ -188,7 +188,48 @@ TEST(binary, pectin1M1045BinaryRegions) {
     denoise->Write(clone,outFile);
 }
 
+TEST(binary, countOnPixels){
+    const string img{"./resultsTemSaxsPaper/pectin1_1045_homogeneous_binarized_opened_closed.tif"};
+    auto denoise = make_shared<Denoise>() ;
+    auto r = denoise->Read(img);
+    typedef itk::MinimumMaximumImageCalculator <Denoise::InputImageType>
+          ImageCalculatorFilterType;
+    ImageCalculatorFilterType::Pointer imageCalculatorFilter
+        = ImageCalculatorFilterType::New();
+    imageCalculatorFilter->SetImage(r);
+    imageCalculatorFilter->Compute();
+    auto max = imageCalculatorFilter->GetMaximum();
+    auto min = imageCalculatorFilter->GetMinimum();
+    std::cout << "max: " << max << " min: " << min << std::endl;
 
+    Denoise::InputImageType::RegionType imgRegion = r->GetLargestPossibleRegion();
+    auto imgSize = imgRegion.GetSize();
+    itk::ImageRegionConstIterator<Denoise::InputImageType> it(r,imgRegion);
+    unsigned int countOnPixels{0};
+    while(!it.IsAtEnd())
+    {
+        auto val = it.Get();
+        // Black pixels(0) are ON pixels.
+        if(val == min){
+            ++countOnPixels;
+        }
+        ++it;
+    }
+    unsigned int totalPixels = imgSize[0] * imgSize[1];
+    double occupiedArea = countOnPixels / static_cast<double>(totalPixels);
+    double sliceThicknessNM = 150;
+    double nm_per_pixel = 0.86;
+    double sliceThicknessPX = sliceThicknessNM / nm_per_pixel;
+    double occupiedVolume = countOnPixels / (totalPixels * sliceThicknessPX);
+    std::cout << "ImgSize:  " << imgSize[0] << " , " << imgSize[1]  << std::endl;
+    std::cout << "TotalPixels = " << totalPixels << std::endl;
+    std::cout << "OnPixels = " << countOnPixels << std::endl;
+    std::cout << "Percentage of occupied Area: " << occupiedArea * 100 << std::endl;
+    std::cout << "TEM slice thickness: " << sliceThicknessNM <<  " nm" << " Resolution: " << nm_per_pixel << " nm/pixel" << std::endl;
+    std::cout << "TEM slice thickness in Pixels:: " << sliceThicknessPX <<  " pixels" << std::endl;
+    std::cout << "Percentage of occupied Volume: " << occupiedVolume * 100 << std::endl;
+
+}
 TEST(homogeneous, pectin1M1045PlusDenoise) {
     const string img{"./resultsTemSaxsPaper/pectin1_1045_homogeneous.tif"};
     auto denoise = make_shared<Denoise>() ;
@@ -269,28 +310,28 @@ TEST(denoise, carrageenanNa851){
     denoise->Write(out3->GetOutput(),outFile);
 }
 
-TEST(morphological, flatStructuringElement){
-
-    auto readKernel = make_shared<Denoise>() ;
-    typedef itk::FlatStructuringElementWithImageBridge<2, Denoise::InputImageType> FlatSEBridgeType;
-
-    const string kernelImg{"./fixtures/cyld3.png"};
-    auto kernelI = readKernel->Read(kernelImg);
-    auto fseBridge = FlatSEBridgeType::FromImage(kernelI);
-    FlatSEBridgeType::Superclass * flatStructureP = &fseBridge;
-
-    auto denoise = make_shared<Denoise>() ;
-    const string inputImg{"./resultsTemSaxsPaper/pectin1_1045_homogeneous_binarized_opened_closed.tif"};
-    auto inputI = denoise->Read(inputImg);
-    auto openF   = denoise->MorphologicalOpening(inputI, *flatStructureP);
-    auto closeF   = denoise->MorphologicalClosing(inputI, *flatStructureP);
-    QuickView viewer;
-    viewer.AddImage(inputI.GetPointer());
-    viewer.AddImage(kernelI.GetPointer());
-    viewer.AddImage(openF->GetOutput());
-    viewer.AddImage(closeF->GetOutput());
-    if (VFLAG) viewer.Visualize();
-}
+// TEST(morphological, flatStructuringElement){
+//
+//     auto readKernel = make_shared<Denoise>() ;
+//     typedef itk::FlatStructuringElementWithImageBridge<2, Denoise::InputImageType> FlatSEBridgeType;
+//
+//     const string kernelImg{"./fixtures/cyld3.png"};
+//     auto kernelI = readKernel->Read(kernelImg);
+//     auto fseBridge = FlatSEBridgeType::FromImage(kernelI);
+//     FlatSEBridgeType::Superclass * flatStructureP = &fseBridge;
+//
+//     auto denoise = make_shared<Denoise>() ;
+//     const string inputImg{"./resultsTemSaxsPaper/pectin1_1045_homogeneous_binarized_opened_closed.tif"};
+//     auto inputI = denoise->Read(inputImg);
+//     auto openF   = denoise->MorphologicalOpening(inputI, *flatStructureP);
+//     auto closeF   = denoise->MorphologicalClosing(inputI, *flatStructureP);
+//     QuickView viewer;
+//     viewer.AddImage(inputI.GetPointer());
+//     viewer.AddImage(kernelI.GetPointer());
+//     viewer.AddImage(openF->GetOutput());
+//     viewer.AddImage(closeF->GetOutput());
+//     if (VFLAG) viewer.Visualize();
+// }
 // TEST(binary, pectin1M1045BinaryOpenCloseOpen){
 //     const string img{"./resultsTemSaxsPaper/pectin1_1045_homogeneous.tif"};
 //     auto denoise = make_shared<Denoise>() ;

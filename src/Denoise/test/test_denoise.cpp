@@ -13,7 +13,6 @@ int main(int argc, char** argv) {
 #include "Denoise.h"
 #include <QuickView.h>
 #include "itkRandomImageSource.h"
-#include "itkFlatStructuringElementWithImageBridge.h"
 using namespace testing;
 using namespace std;
 TEST(fileIO, readTiff){
@@ -116,28 +115,6 @@ TEST(morphological, closing){
     viewer.AddImage(mc20->GetOutput(), 1, "Morphological Opening, r=20");
     viewer.AddImage(mc3->GetOutput(), 1, "Morphological Opening, r=3");
     auto d1 = denoise->AnisotropicFilterCurvature(mc3->GetOutput(), 5, 0.044, 5);
-    if (VFLAG) viewer.Visualize();
-}
-TEST(morphological, flatStructuringElement){
-
-    auto readKernel = make_shared<Denoise>() ;
-    typedef itk::FlatStructuringElementWithImageBridge<2, Denoise::InputImageType> FlatSEBridgeType;
-
-    const string kernelImg{"./fixtures/cyld3.png"};
-    auto kernelI = readKernel->Read(kernelImg);
-    auto fseBridge = FlatSEBridgeType::FromImage(kernelI);
-    FlatSEBridgeType::Superclass * flatStructureP = &fseBridge;
-
-    auto denoise = make_shared<Denoise>() ;
-    const string inputImg{"./fixtures/M1045_11_20.tiff"};
-    auto inputI = denoise->Read(inputImg);
-    auto openF   = denoise->MorphologicalOpening(inputI, *flatStructureP);
-    auto closeF   = denoise->MorphologicalClosing(inputI, *flatStructureP);
-    QuickView viewer;
-    viewer.AddImage(inputI.GetPointer());
-    viewer.AddImage(kernelI.GetPointer());
-    viewer.AddImage(openF->GetOutput());
-    viewer.AddImage(closeF->GetOutput());
     if (VFLAG) viewer.Visualize();
 }
 
