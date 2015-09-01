@@ -10,13 +10,13 @@ int main(int argc, char** argv) {
     return RUN_ALL_TESTS();
 }
 
-#include "Skeleton.h"
+#include "../Skeleton.h"
 #include <QuickView.h>
 #include "itkRandomImageSource.h"
 using namespace testing;
 using namespace std;
 
-TEST(skeleton, works){
+TEST(skeleton, run){
     const string img{"./fixtures/M1045_11_20.tiff"};
     cout << "Test works" << endl;
     // Visualize
@@ -30,3 +30,20 @@ TEST(skeleton, works){
     // if (VFLAG) viewer.Visualize();
 }
 
+TEST(skeletonaa, binaryFromSkeleton){
+    // READ
+    string img{"./fixtures/CarK4Cropped83.tif"};
+    const unsigned D = 3;
+    typedef itk::Image<unsigned int,D > InputImageType;
+    auto a = skeleton::Read<InputImageType>(img);
+    // auto a = skeleton::Read<InputImageType>("./fixtures/CarK4Cropped83.tif");
+    // Denoise (Anisotropic Edge Conservation)
+
+    // Binary Local Otsu
+
+    // Binary to Thin
+
+    // Thin to Graph!!
+
+    // End nodes, Hessian (1sigma scale), merge.!!
+}
