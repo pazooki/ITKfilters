@@ -42,54 +42,78 @@ add_subdirectory(main)
 add_subdirectory(Denoise)
 add_subdirectory(Skeleton)
 set(ENABLE_PARALLEL "ON" CACHE BOOL "Enable to use openMP")
+################ GTEST ################
+# Setup using ExternalProject + add_subdirectory.
+#    from: http://crascit.com/2015/07/25/cmake-gtest/
+# Download and unpack gtest at configure time
+set(ENABLE_GOOGLE_TEST "ON" CACHE BOOL "Automatic download of gtest")
+IF(ENABLE_GOOGLE_TEST)
+    file(COPY "./fixtures" DESTINATION ${EXECUTABLE_OUTPUT_PATH} )
+    configure_file(./fixtures/gtest-CMakeLists.txt gtest-download/CMakeLists.txt)
+    execute_process(COMMAND ${CMAKE_COMMAND} -G "${CMAKE_GENERATOR}" .
+        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/gtest-download )
+    execute_process(COMMAND ${CMAKE_COMMAND} --build .
+        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/gtest-download )
+
+    # Add gtest directly to our build
+    add_subdirectory(${CMAKE_BINARY_DIR}/gtest-src
+        ${CMAKE_BINARY_DIR}/gtest-build
+        EXCLUDE_FROM_ALL )
+
+    # Add the gtest include directory, since gtest
+    # doesn't add that dependency to its gtest target
+    target_include_directories(gtest INTERFACE
+        "${CMAKE_BINARY_DIR}/gtest-src/include" )
+ENDIF(ENABLE_GOOGLE_TEST)
 # TEST
 ### Google TEST AND MOCK
 # There must be an environment variable (in .bashrc or profile.d)
 # export GMOCK_HOME=/path/to/gmock-1.7.0
-set(ENABLE_GOOGLE_TEST "ON" CACHE BOOL "Requires ENV variable GMOCK_HOME pointing to gmock parent folder")
+# set(ENABLE_GOOGLE_TEST "ON" CACHE BOOL "Requires ENV variable GMOCK_HOME pointing to gmock parent folder")
 
-IF(ENABLE_GOOGLE_TEST)
-    file(COPY "./fixtures" DESTINATION ${EXECUTABLE_OUTPUT_PATH} )
+#IF(ENABLE_GOOGLE_TEST)
+#    file(COPY "./fixtures" DESTINATION ${EXECUTABLE_OUTPUT_PATH} )
 
-    set(GMOCK_HOME "$ENV{GMOCK_HOME}" CACHE PATH "Set this to gmock parent folder")
-    #FIND GMOCK
-    find_path(GTEST_INCLUDE_DIR
-             gtest/gtest.h
-             HINTS ${GMOCK_HOME}/gtest/include
-             PATH_SUFFIXES gtest
-             DOC "gtest include dir")
-    find_path(GMOCK_INCLUDE_DIR
-             gmock/gmock.h
-             HINTS ${GMOCK_HOME}/include
-             PATH_SUFFIXES gmock
-             DOC "gmock include dir")
-    include_directories(SYSTEM ${GMOCK_INCLUDE_DIR} ${GTEST_INCLUDE_DIR})
+#    set(GMOCK_HOME "$ENV{GMOCK_HOME}" CACHE PATH "Set this to gmock parent folder")
+#    #FIND GMOCK
+    # find_path(GTEST_INCLUDE_DIR
+    #          gtest/gtest.h
+    #          HINTS ${GMOCK_HOME}/gtest/include
+    #          PATH_SUFFIXES gtest
+    #          DOC "gtest include dir")
+    # find_path(GMOCK_INCLUDE_DIR
+    #          gmock/gmock.h
+    #          HINTS ${GMOCK_HOME}/include
+    #          PATH_SUFFIXES gmock
+    #          DOC "gmock include dir")
+    # include_directories(SYSTEM ${GMOCK_INCLUDE_DIR} ${GTEST_INCLUDE_DIR})
 
-    find_library(GTEST_LIBRARY
-                NAMES gtest
-                      libgtest
-                      libgtest.a
-                HINTS ${GMOCK_HOME}/mybuild/gtest
-                      ${GMOCK_HOME}/gtest
-                      ${GMOCK_HOME}/gtest/mybuild)
-    find_library(GTEST_LIBRARY_MAIN
-                NAMES gtest_main
-                      libgtest_main
-                      libgtest.a
-                HINTS ${GMOCK_HOME}/mybuild/gtest
-                      ${GMOCK_HOME}/gtest
-                      ${GMOCK_HOME}/gtest/mybuild)
+    # find_library(GTEST_LIBRARY
+    #             NAMES gtest
+    #                   libgtest
+    #                   libgtest.a
+    #             HINTS ${GMOCK_HOME}/mybuild/gtest
+    #                   ${GMOCK_HOME}/gtest
+    #                   ${GMOCK_HOME}/gtest/mybuild)
+    # find_library(GTEST_LIBRARY_MAIN
+    #             NAMES gtest_main
+    #                   libgtest_main
+    #                   libgtest.a
+    #             HINTS ${GMOCK_HOME}/mybuild/gtest
+    #                   ${GMOCK_HOME}/gtest
+    #                   ${GMOCK_HOME}/gtest/mybuild)
 
-    find_library(GMOCK_LIBRARY
-                NAMES gmock
-                      libgmock
-                      libgmock.a
-                HINTS ${GMOCK_HOME}/mybuild
-                      ${GMOCK_HOME})
-    find_library(GMOCK_LIBRARY_MAIN
-                NAMES gmock_main
-                      libgmock_main
-                      libgmock.a
-                HINTS ${GMOCK_HOME}/mybuild
-                      ${GMOCK_HOME})
-ENDIF(ENABLE_GOOGLE_TEST)
+    # find_library(GMOCK_LIBRARY
+    #             NAMES gmock
+    #                   libgmock
+    #                   libgmock.a
+    #             HINTS ${GMOCK_HOME}/mybuild
+    #                   ${GMOCK_HOME})
+    # find_library(GMOCK_LIBRARY_MAIN
+    #             NAMES gmock_main
+    #                   libgmock_main
+    #                   libgmock.a
+    #             HINTS ${GMOCK_HOME}/mybuild
+    #                   ${GMOCK_HOME})
+# ENDIF(ENABLE_GOOGLE_TEST)
+

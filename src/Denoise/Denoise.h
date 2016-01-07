@@ -80,6 +80,8 @@ public:
     /**********************************************************/
     /*******Binary Filters********/
     /**********************************************************/
+    typedef itk::BinaryThresholdImageFilter<Denoise::RealImageType, Denoise::InputImageType> ThresholdType;
+    typedef ThresholdType::Pointer ThresholdTypeP;
     typedef itk::OtsuThresholdImageFilter<Denoise::RealImageType, Denoise::InputImageType> OtsuType;
     typedef OtsuType::Pointer OtsuTypeP;
     typedef itk::HuangThresholdImageFilter<Denoise::RealImageType, Denoise::InputImageType> HuangType;
@@ -124,6 +126,8 @@ public:
     FlatOpeningFilterTypeP MorphologicalOpening(InputTypeP img, FlatStructuringElementType& structure);
     FlatClosingFilterTypeP MorphologicalClosing(RealTypeP img, FlatStructuringElementType& structure);
     FlatClosingFilterTypeP MorphologicalClosing(InputTypeP img, FlatStructuringElementType& structure);
+    ThresholdTypeP BinaryThreshold(RealTypeP img, double threshold);
+    ThresholdTypeP BinaryThreshold(InputTypeP img, unsigned int threshold);
     OtsuTypeP BinaryOtsu(RealTypeP img);
     OtsuTypeP BinaryOtsu(InputTypeP img);
     HuangTypeP BinaryHuang(RealTypeP img);

@@ -1,4 +1,5 @@
-#include "gmock/gmock.h"
+/* #include "gmock/gmock.h" */
+#include "gtest/gtest.h"
 #include <memory>
 #include "prog_options_test.h"
 
@@ -13,6 +14,7 @@ int main(int argc, char** argv) {
 #include "Denoise.h"
 #include <QuickView.h>
 #include "itkRandomImageSource.h"
+#include <itkImageFileWriter.h>
 using namespace testing;
 using namespace std;
 TEST(fileIO, readTiff){
@@ -118,6 +120,19 @@ TEST(morphological, closing){
     if (VFLAG) viewer.Visualize();
 }
 
+TEST(binary, threshold){
+    const string img{"./fixtures/M1045_11_20.tiff"};
+    auto denoise = make_shared<Denoise>() ;
+    auto r = denoise->Read(img);
+    unsigned int threshold = 90;
+    auto b = denoise->BinaryThreshold(r, threshold);
+    QuickView viewer;
+    viewer.AddImage(r.GetPointer(), 1, img);
+    viewer.AddImage(b->GetOutput(), 1, "BinaryThreshold");
+    if (VFLAG) viewer.Visualize();
+    string outFile = "./testResults/pectin_threshold.tiff";
+    denoise->Write(b->GetOutput(), outFile);
+}
 TEST(binary, Otsu){
     const string img{"./fixtures/M1045_11_20.tiff"};
     auto denoise = make_shared<Denoise>() ;

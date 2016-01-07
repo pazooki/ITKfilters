@@ -4,7 +4,8 @@ include_directories("..")
 add_executable(tem_saxs_denoise.exe tem_saxs_paper.cpp)
 set_source_files_properties (tem_saxs_denoise.exe PROPERTIES COMPILE_FLAGS "-Wno-sign-compare")
 target_link_libraries(tem_saxs_denoise.exe  ldenoise)
-target_link_libraries(tem_saxs_denoise.exe  ${GMOCK_LIBRARY_MAIN} ${GTEST_LIBRARY_MAIN} ${CMAKE_THREAD_LIBS_INIT})
+# target_link_libraries(tem_saxs_denoise.exe  ${GMOCK_LIBRARY_MAIN} ${GTEST_LIBRARY_MAIN} ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries(tem_saxs_denoise.exe gtest_main ${CMAKE_THREAD_LIBS_INIT})
 
 add_custom_command(
     TARGET tem_saxs_denoise.exe PRE_BUILD

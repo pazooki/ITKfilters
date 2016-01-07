@@ -1,4 +1,5 @@
-#include "gmock/gmock.h"
+/* #include "gmock/gmock.h" */
+#include "gtest/gtest.h"
 #include "../test/prog_options_test.h"
 #include <memory>
 

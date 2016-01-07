@@ -20,9 +20,6 @@ typename itk::ImageFileReader<ImageType>::Pointer skeleton::Read(const std::stri
     }
     return reader;
 };
-itk::CurvatureAnisotropicDiffusionImageFilter<
-        RealImageType, RealImageType> AnisotropicFilterCurvatureType ;
-;
 // int main( int argc, char* argv[] )
 // {
 //     std::cout << " A main" << std::endl;

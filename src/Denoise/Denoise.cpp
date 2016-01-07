@@ -262,6 +262,24 @@ Denoise::FlatClosingFilterTypeP Denoise::MorphologicalClosing(Denoise::InputType
 /*******BINARY FILTERS********/
 /**********************************************************/
 
+Denoise::ThresholdTypeP Denoise::BinaryThreshold(Denoise::RealTypeP img, double threshold){
+    typedef itk::BinaryThresholdImageFilter<Denoise::RealImageType, Denoise::InputImageType> ThresholdType;
+    auto b = ThresholdType::New();
+    b->SetInput(img);
+    b->SetInsideValue(1);
+    b->SetOutsideValue(255);
+    b->SetUpperThreshold(threshold);
+//    b->Update();
+    return b;
+}
+Denoise::ThresholdTypeP Denoise::BinaryThreshold(Denoise::InputTypeP img, unsigned int threshold){
+
+    typedef itk::CastImageFilter< Denoise::InputImageType, Denoise::RealImageType > CastFilterType;
+    auto filter = CastFilterType::New();
+    filter->SetInput(img);
+    filter->Update();
+    return BinaryThreshold(filter->GetOutput(), static_cast<double>(threshold));
+}
 Denoise::OtsuTypeP Denoise::BinaryOtsu(Denoise::RealTypeP img){
     typedef itk::OtsuThresholdImageFilter<Denoise::RealImageType, Denoise::InputImageType> OtsuType;
     auto b = OtsuType::New();
