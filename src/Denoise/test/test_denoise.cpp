@@ -15,6 +15,7 @@ int main(int argc, char** argv) {
 #include <QuickView.h>
 #include "itkRandomImageSource.h"
 #include <itkImageFileWriter.h>
+#include <itkBinaryFillholeImageFilter.h>
 using namespace testing;
 using namespace std;
 TEST(fileIO, readTiff){
@@ -132,6 +133,23 @@ TEST(binary, threshold){
     if (VFLAG) viewer.Visualize();
     string outFile = "./testResults/pectin_threshold.tiff";
     denoise->Write(b->GetOutput(), outFile);
+}
+TEST(holeFilling, binary){
+    const string img{"./testResults/pectin_threshold.tiff"};
+    auto denoise = make_shared<Denoise>() ;
+    auto r = denoise->Read(img);
+    using HoleFilter = itk::BinaryFillholeImageFilter<Denoise::InputImageType>;
+    auto fillFilter = HoleFilter::New();
+    fillFilter->SetInput(r.GetPointer());
+    fillFilter->SetForegroundValue( itk::NumericTraits< Denoise::InputPixelType>::min());
+    fillFilter->Update();
+
+    QuickView viewer;
+    viewer.AddImage(r.GetPointer(), 1, img);
+    viewer.AddImage(fillFilter->GetOutput(), 1, "BinaryThreshold");
+    if (VFLAG) viewer.Visualize();
+    string outFile = "./testResults/pectin_threshold_hole_filled.tiff";
+    denoise->Write(fillFilter->GetOutput(), outFile);
 }
 TEST(binary, Otsu){
     const string img{"./fixtures/M1045_11_20.tiff"};
