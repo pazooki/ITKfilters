@@ -41,6 +41,7 @@ ENDIF(ENABLE_PARALLEL)
 add_subdirectory(main)
 add_subdirectory(Denoise)
 add_subdirectory(Skeleton)
+add_subdirectory(Quadrature)
 set(ENABLE_PARALLEL "ON" CACHE BOOL "Enable to use openMP")
 ################ GTEST ################
 # Setup using ExternalProject + add_subdirectory.

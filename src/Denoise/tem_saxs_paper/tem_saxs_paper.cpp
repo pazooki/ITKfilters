@@ -1,6 +1,6 @@
 /* #include "gmock/gmock.h" */
 #include "gtest/gtest.h"
-#include "../test/prog_options_test.h"
+#include "prog_options_test.h"
 #include <memory>
 
 bool VFLAG;

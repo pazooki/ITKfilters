@@ -1,4 +1,5 @@
 include_directories(SYSTEM ${GMOCK_INCLUDE_DIR} ${GTEST_INCLUDE_DIR})
+include_directories(${CMAKE_SOURCE_DIR}/Common)
 include_directories("..")
 
 add_executable(tem_saxs_denoise.exe tem_saxs_paper.cpp)

@@ -1,4 +1,5 @@
 include_directories(SYSTEM ${GMOCK_INCLUDE_DIR} ${GTEST_INCLUDE_DIR})
+include_directories(${CMAKE_SOURCE_DIR}/Common)
 include_directories("..")
 # add_library(lpoTest prog_options_test.h)
 # target_link_libraries(lpoTest ${Boost_PROGRAM_OPTIONS_LIBRARY})
