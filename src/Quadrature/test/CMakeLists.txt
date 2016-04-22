@@ -4,7 +4,9 @@ include_directories(${CMAKE_SOURCE_DIR}/Common)
 include_directories("..")
 # add_library(lpoTest prog_options_test.h)
 # target_link_libraries(lpoTest ${Boost_PROGRAM_OPTIONS_LIBRARY})
-
+find_package(VTK REQUIRED)
+include(${VTK_USE_FILE})
+find_package(Qt5 COMPONENTS Widgets)
 
 # test_quadrature
 add_executable(test_quadrature.exe test_quadrature.cpp)
@@ -12,6 +14,17 @@ set_source_files_properties (test_quadrature.exe PROPERTIES COMPILE_FLAGS "-Wno-
 target_link_libraries(test_quadrature.exe gtest_main ${CMAKE_THREAD_LIBS_INIT})
 target_link_libraries(test_quadrature.exe ${ITK_LIBRARIES})
 target_link_libraries(test_quadrature.exe ${Boost_PROGRAM_OPTIONS_LIBRARY})
+target_link_libraries(test_quadrature.exe ${VTK_LIBRARIES})
+target_link_libraries(test_quadrature.exe Qt5::Widgets)
+
+# test_riesz
+add_executable(test_riesz.exe test_riesz.cpp)
+set_source_files_properties (test_riesz.exe PROPERTIES COMPILE_FLAGS "-Wno-sign-compare")
+target_link_libraries(test_riesz.exe gtest_main ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries(test_riesz.exe ${ITK_LIBRARIES})
+target_link_libraries(test_riesz.exe ${Boost_PROGRAM_OPTIONS_LIBRARY})
+target_link_libraries(test_riesz.exe ${VTK_LIBRARIES})
+target_link_libraries(test_riesz.exe Qt5::Widgets)
 
 add_custom_command(
     TARGET test_quadrature.exe PRE_BUILD

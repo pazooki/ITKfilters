@@ -3,11 +3,11 @@
 #include <string>
 #include "prog_options_test.h"
 #include "visualize_functions.h"
-#include "itkAdaptiveFiltering3DImageFilter.h"
+#include "itkRieszImageFilter.h"
+#include "itkFFTPadImageFilter.h"
 #include "itkImage.h"
 #include "itkImageFileReader.h"
-#include "itkCastImageFilter.h"
-#include "itkFFTPadImageFilter.h"
+#include <itkComplexToRealImageFilter.h>
 
 // bool VFLAG;
 // int main(int argc, char** argv) {
@@ -41,7 +41,6 @@ int main(int argc, char** argv){
     auto castFilter = CastFilterType::New();
     castFilter->SetInput(reader->GetOutput());
     castFilter->Update();
-    castFilter->UpdateLargestPossibleRegion();
 
     // Pad to valid FFT size.
     typedef itk::FFTPadImageFilter<OutImageType> PadType;
@@ -50,12 +49,18 @@ int main(int argc, char** argv){
     padFilter->Update();
     padFilter->UpdateLargestPossibleRegion();
 
-    using AdaptiveType = itk::AdaptiveFiltering3DImageFilter<OutImageType,OutImageType>;
-    auto filter = AdaptiveType::New();
-    filter->SetInput(padFilter->GetOutput());
-    filter->Update();
-    filter->UpdateLargestPossibleRegion();
-    if(VFLAG) visualize::VisualizeITKImages(reader->GetOutput(), filter->GetOutput());
+    // Riesz filter
+    typedef itk::RieszImageFilter<OutImageType> RieszFilter;
+    auto riesz = RieszFilter::New();
+    riesz->SetInput(padFilter->GetOutput());
+
+    typedef typename RieszFilter::OutputImageType ComplexImageType;
+
+    typedef itk::ComplexToRealImageFilter<ComplexImageType , OutImageType> CastFromComplexFilterType;
+    auto castComplexFilter = CastFromComplexFilterType::New();
+    castComplexFilter->SetInput(riesz->GetOutput());
+    castComplexFilter->Update();
+    if(VFLAG) visualize::VisualizeITKImages(reader->GetOutput(), castComplexFilter->GetOutput());
 
 
 }

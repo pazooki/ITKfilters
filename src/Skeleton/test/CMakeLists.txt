@@ -1,6 +1,7 @@
 SET( ITK_LIBRARIES ${ITK_LIBRARIES} PARENT_SCOPE )
 SET( Boost_LIBRARIES ${Boost_LIBRARIES} PARENT_SCOPE )
 include_directories(SYSTEM ${GMOCK_INCLUDE_DIR} ${GTEST_INCLUDE_DIR})
+include_directories(${CMAKE_SOURCE_DIR}/Common)
 include_directories("..")
 add_executable(test_skeleton.exe test_skeleton.cpp ../Skeleton.h)
 # set_source_files_properties (test_skeleton.exe PROPERTIES COMPILE_FLAGS "-Wno-sign-compare")

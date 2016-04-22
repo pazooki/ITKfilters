@@ -1,7 +1,7 @@
 /* #include "gmock/gmock.h" */
 #include "gtest/gtest.h"
 #include <memory>
-#include "../Denoise/test/prog_options_test.h"
+#include "prog_options_test.h"
 
 bool VFLAG;
 int main(int argc, char** argv) {

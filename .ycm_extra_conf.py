@@ -19,6 +19,8 @@ flags = [
 '-I','./src',
 '-I','./src/Denoise',
 '-I','./src/Skeleton',
+'-I','./src/Quadrature',
+'-I','./src/Common',
 '-I','./build-release/gtest-src/include',
 '-I','./build-release',
 '-I/usr/include/freetype2',
