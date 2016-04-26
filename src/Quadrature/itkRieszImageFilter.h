@@ -19,7 +19,9 @@
 #define itkRieszImageFilter_h
 
 #include "itkImageToImageFilter.h"
+#include "itkVectorImage.h"
 #include <complex>
+#include <itkFixedArray.h>
 
 namespace itk
 {
@@ -28,33 +30,41 @@ namespace itk
  *
  * \ingroup ITKBasicFilters
  */
-template< typename TInputImage, typename TOutputImage =
-  Image<std::complex<typename TInputImage::PixelType>,
-        TInputImage::ImageDimension > >
+template< typename TInputImage >
 class RieszImageFilter:
-  public ImageToImageFilter< TInputImage, TOutputImage>
+  public ImageToImageFilter< TInputImage, TInputImage>
 {
 public:
   /** Standard class typedefs. */
   typedef RieszImageFilter                                Self;
-  typedef ImageToImageFilter< TInputImage, TOutputImage > Superclass;
+  typedef ImageToImageFilter< TInputImage, TInputImage > Superclass;
   typedef SmartPointer< Self >                            Pointer;
   typedef SmartPointer< const Self >                      ConstPointer;
 
   /** Some convenient typedefs. */
-  typedef TInputImage                            InputImageType;
-  typedef typename InputImageType::Pointer       InputImagePointer;
-  typedef typename InputImageType::ConstPointer  InputImageConstPointer;
-  typedef typename InputImageType::RegionType    InputImageRegionType;
-  typedef typename InputImageType::PixelType     InputImagePixelType;
+  typedef TInputImage                             InputImageType;
+  typedef typename InputImageType::Pointer        InputImagePointer;
+  typedef typename InputImageType::ConstPointer   InputImageConstPointer;
+  typedef typename InputImageType::RegionType     InputImageRegionType;
+  typedef typename InputImageType::PixelType      InputImagePixelType;
+  typedef typename InputImageType::SpacingType    SpacingType;
+  typedef typename InputImageRegionType::SizeType SizeType;
   // Intermediate calculations:
-  typedef Image<std::complex<typename InputImagePixelType>,
-          TInputImage::ImageDimension>           FFTImageType;
-  typedef typename FFTImageType::Pointer      FFTImagePointer;
-  typedef typename FFTImageType::ConstPointer FFTImageConstPointer;
-  typedef typename FFTImageType::RegionType   FFTImageRegionType;
-  typedef typename FFTImageType::PixelType    FFTImagePixelType;
+  typedef Image<std::complex<InputImagePixelType>,
+          TInputImage::ImageDimension>            ComplexImageType;
+  typedef typename ComplexImageType::Pointer      ComplexImagePointer;
+  typedef typename ComplexImageType::ConstPointer ComplexImageConstPointer;
+  typedef typename ComplexImageType::RegionType   ComplexImageRegionType;
+  typedef typename ComplexImageType::PixelType    ComplexImagePixelType;
 
+  typedef double RealType;
+  typedef Vector< RealType, TInputImage::ImageDimension > DirectionType;
+  typedef VectorImage< InputImagePixelType, TInputImage::ImageDimension > RieszComponentsImageType;
+  typedef VectorImage< ComplexImagePixelType, TInputImage::ImageDimension > ComplexRieszComponentsImageType;
+
+  typedef VectorImage< RealType, TInputImage::ImageDimension + 1 > EigenImageType;
+  typedef Image< FixedArray<RealType, TInputImage::ImageDimension + 1 >, TInputImage::ImageDimension > EigenArrayImageType;
+  typedef Image< FixedArray<InputImagePixelType, TInputImage::ImageDimension >, TInputImage::ImageDimension > RieszComponentsArrayImageType;
   /** ImageDimension constants */
   itkStaticConstMacro(ImageDimension, unsigned int,
                       TInputImage::ImageDimension);
@@ -65,15 +75,41 @@ public:
   /** Runtime information support. */
   itkTypeMacro(RieszImageFilter,
                ImageToImageFilter);
+
+  itkSetMacro( SigmaGaussianDerivative, RealType );
+  itkGetConstMacro( SigmaGaussianDerivative, RealType );
+
+
+  TInputImage*              GetOutputReal();
+  RieszComponentsImageType* GetOutputRieszComponents();
+  TInputImage*              GetOutputRieszNorm();
+
+  typename InputImageType::Pointer ComputeRieszProjection(const DirectionType & direction, const RieszComponentsImageType* rieszComponents ) const;
+  typename InputImageType::Pointer ComputeLocalPhaseInDirection(const DirectionType & unitary_direction, const InputImageType* rieszReal, const RieszComponentsImageType* rieszComponents) const;
+  typename RieszImageFilter<TInputImage>::EigenImageType::Pointer
+    ComputeEigenVectorsMaximizingRieszComponents(const unsigned int & gaussian_window_radius, const RieszComponentsImageType* rieszComponents) const;
+
 protected:
   RieszImageFilter();
   ~RieszImageFilter() {}
   void PrintSelf(std::ostream & os, Indent indent) const ITK_OVERRIDE;
   /** Single-threaded version of GenerateData. */
   void GenerateData() ITK_OVERRIDE;
+  /**  Create the Outputs */
+  DataObject::Pointer MakeOutput(unsigned int idx);
+
 private:
   RieszImageFilter(const Self &) ITK_DELETE_FUNCTION;
   void operator=(const Self &) ITK_DELETE_FUNCTION;
+  InputImagePixelType m_SigmaGaussianDerivative;
+  SizeType       m_inputSizeSquare;    //size of input/output image
+  SpacingType    m_inputSpacingSquare; //spacing of input image.
+
+  typename InputImageType::Pointer ComputeRealComponent(const ComplexImageType* fftForward) const;
+  typename InputImageType::Pointer ComputeRieszComponent(const ComplexImageType* fftForward, const unsigned int & NComponent) const;
+  typename RieszComponentsImageType::Pointer ComputeRieszComponents(const ComplexImageType* fftForward) const;
+  typename InputImageType::Pointer ComputeRieszNorm(const RieszComponentsImageType* rieszComponents) const;
+  void ComputeLocalAmplitude();
 };
 } // end namespace itk
 #ifndef ITK_MANUAL_INSTANTIATION
