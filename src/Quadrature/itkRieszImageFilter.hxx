@@ -17,12 +17,16 @@
  *=========================================================================*/
 #ifndef itkRieszImageFilter_hxx
 #define itkRieszImageFilter_hxx
-// #include "visualize_functions.h" // TODO REMOVE
+#include "visualize_functions.h" // TODO REMOVE
 #include <array>
 #include "itkImageRegionIteratorWithIndex.h"
+#include "itkImageRegionConstIterator.h"
+#include "itkImageRegionIterator.h"
+#include "itkImageIterator.h"
 #include "itkRieszImageFilter.h"
 #include <itkComposeImageFilter.h>
 #include <itkVectorIndexSelectionCastImageFilter.h>
+#include <itkVectorImageToImageAdaptor.h>
 #include "itkRealToHalfHermitianForwardFFTImageFilter.h"
 #include "itkHalfHermitianToRealInverseFFTImageFilter.h"
 #include "itkMultiplyImageFilter.h"
@@ -39,7 +43,9 @@
 #include <itkImageRegionConstIterator.h>
 #include <itkConstNeighborhoodIterator.h>
 #include <itkNeighborhoodInnerProduct.h>
-#include <itkGaussianOperator.h>
+#include <itkGaussianImageSource.h>
+#include <itkMatrix.h>
+#include <itkSymmetricEigenAnalysis.h>
 
 namespace itk
 {
@@ -55,8 +61,8 @@ RieszImageFilter< TInputImage >
   this->SetNthOutput( 2, this->MakeOutput(2) );
 
   this->m_SigmaGaussianDerivative = 1.0;
-
 }
+
 template< typename TInputImage >
 void
 RieszImageFilter< TInputImage >
@@ -68,13 +74,13 @@ RieszImageFilter< TInputImage >
   progress->SetMiniPipelineFilter(this);
   // Allocate the outputs
   InputImageType* evenPart = this->GetOutputReal();
-  evenPart->SetBufferedRegion( evenPart->GetLargestPossibleRegion() );
+  evenPart->SetRegions( evenPart->GetLargestPossibleRegion() );
   evenPart->Allocate();
   RieszComponentsImageType* rieszComponents = this->GetOutputRieszComponents();
-  rieszComponents->SetBufferedRegion( rieszComponents->GetRequestedRegion() );
+  rieszComponents->SetRegions( rieszComponents->GetRequestedRegion() );
   rieszComponents->Allocate();
   InputImageType* normPart = this->GetOutputRieszNorm();
-  normPart->SetBufferedRegion( normPart->GetRequestedRegion() );
+  normPart->SetRegions( normPart->GetRequestedRegion() );
   normPart->Allocate();
 
   typedef RealToHalfHermitianForwardFFTImageFilter < InputImageType> FFTFilterType;
@@ -208,17 +214,38 @@ RieszImageFilter<TInputImage>
 template< typename TInputImage>
 typename RieszImageFilter<TInputImage>::InputImageType::Pointer
 RieszImageFilter<TInputImage>
-::ComputeRieszNorm(const RieszComponentsImageType* rieszComponents) const
+::ComputeLocalAmplitude(const InputImageType* real_part, const InputImageType* riesz_norm_part) const
 {
-  // typedef itk::ImageDuplicator< InputImageType > DuplicatorType;
-  // typename DuplicatorType::Pointer duplicator= DuplicatorType::New();
-  // duplicator->SetInputImage(this->GetInput());
-  // duplicator->Update();
+  typedef itk::SquareImageFilter<InputImageType,InputImageType> SquareImageFilterType;
+  auto squareFilterEven = SquareImageFilterType::New();
+  squareFilterEven->SetInput(real_part);
+  squareFilterEven->Update();
+  auto squareFilterNorm = SquareImageFilterType::New();
+  squareFilterNorm->SetInput(riesz_norm_part);
+  squareFilterNorm->Update();
+
+  typedef itk::AddImageFilter<InputImageType,InputImageType, InputImageType> AddImageFilterType;
+  auto addFilter = AddImageFilterType::New();
+  addFilter->SetInput1(squareFilterEven->GetOutput());
+  addFilter->SetInput2(squareFilterNorm->GetOutput());
+  addFilter->Update();
+
+  typedef SqrtImageFilter<InputImageType,InputImageType> SqrtImageFilterType;
+  typename SqrtImageFilterType::Pointer sqrtFilter = SqrtImageFilterType::New();
+  sqrtFilter->SetInput(addFilter->GetOutput());
+  sqrtFilter->Update();
+  return sqrtFilter->GetOutput();
+}
+
+template< typename TInputImage>
+typename RieszImageFilter<TInputImage>::InputImageType::Pointer
+RieszImageFilter<TInputImage>
+::ComputeRieszWeightedNorm(const RieszComponentsImageType* rieszComponents, const DirectionType & weights) const
+{
   typename InputImageType::Pointer output = InputImageType::New();
   output->SetRegions(rieszComponents->GetBufferedRegion());
   output->Allocate();
   output->FillBuffer(NumericTraits<InputImagePixelType>::Zero);
-  std::cout << "End Duplicate" << std::endl;
 
   typedef VectorIndexSelectionCastImageFilter<RieszComponentsImageType,InputImageType> CastIndexType;
   typename CastIndexType::Pointer castIndex = CastIndexType::New();
@@ -230,10 +257,15 @@ RieszImageFilter<TInputImage>
   typedef AddImageFilter<InputImageType,InputImageType,InputImageType> AddImageFilterType;
   typename AddImageFilterType::Pointer addFilter = AddImageFilterType::New();
 
+  typedef itk::MultiplyImageFilter<TInputImage,TInputImage,TInputImage> MultiplyImageFilterType;
+  typename MultiplyImageFilterType::Pointer multiplyByConstant = MultiplyImageFilterType::New();
   for (unsigned int i = 0 ; i<ImageDimension ; ++i){
     castIndex->SetIndex(i);
     castIndex->Update();
-    squareFilter->SetInput(castIndex->GetOutput());
+    multiplyByConstant->SetInput(castIndex->GetOutput());
+    multiplyByConstant->SetConstant(weights[i]);
+    multiplyByConstant->Update();
+    squareFilter->SetInput(multiplyByConstant->GetOutput());
     squareFilter->Update();
     typename InputImageType::Pointer squareResult = squareFilter->GetOutput();
     squareResult->DisconnectPipeline();
@@ -252,91 +284,217 @@ RieszImageFilter<TInputImage>
 }
 
 template< typename TInputImage>
-typename RieszImageFilter<TInputImage>::EigenImageType::Pointer
+typename RieszImageFilter<TInputImage>::InputImageType::Pointer
 RieszImageFilter<TInputImage>
-::ComputeEigenVectorsMaximizingRieszComponents(const unsigned int & gaussian_window_radius, const RieszComponentsImageType* rieszComponents) const
+::ComputeRieszNorm(const RieszComponentsImageType* rieszComponents) const
 {
-  typename EigenImageType::Pointer eigenOutputOriginal = EigenImageType::New();
- // typename EigenImageType::Region region;
-  // eigenOutputOriginal->SetBufferedRegion( rieszComponents->GetRequestedRegion() );
-  eigenOutputOriginal->Allocate();
-
-
-  std::array<InputImagePointer, ImageDimension> comps;
-  typedef VectorIndexSelectionCastImageFilter<RieszComponentsImageType,InputImageType> CastIndexType;
-  typename CastIndexType::Pointer castIndex = CastIndexType::New();
-  castIndex->SetInput(rieszComponents);
+  DirectionType weights;
   for (unsigned int i = 0 ; i < ImageDimension ; ++i)
-  {
-    castIndex->SetIndex(i);
-    comps[i] = castIndex->GetOutput();
-    comps[i]->DisconnectPipeline();
-  }
+    weights[i] = 1.0 ;
+  return ComputeRieszWeightedNorm(rieszComponents, weights);
+}
 
-  // typename RieszComponentsArrayImageType::Pointer rieszArray = RieszComponentsArrayImageType::New();
-  // rieszArray->SetBufferedRegion(rieszComponents->GetBufferedRegion());
-  // rieszArray->Allocate();
-  // ImageRegionIterator<RieszComponentsArrayImageType> rieszArrayIt(
-  //     rieszArray, rieszArray->GetRequestedRegion());
-  // ImageRegionConstIterator<RieszComponentsImageType> rieszIt(
-  //     rieszComponents, rieszComponents->GetRequestedRegion());
-  // for(rieszArrayIt.GoToBegin(), rieszIt.GoToBegin() ;
-  //     !rieszArrayIt.IsAtEnd();
-  //     ++rieszArrayIt, ++rieszIt)
-  // {
-  //   auto g = rieszIt.Get();
-  //   double carray[3] =  {g[0], g[1], g[2] } ;
-  //   rieszArrayIt.Set(carray);
-  // }
+template< typename TInputImage>
+typename RieszImageFilter<TInputImage>::InputImageType::Pointer
+RieszImageFilter<TInputImage>
+::ComputeRieszWeightedNormByEigenValues(const RieszComponentsImageType* rieszComponents, const typename EigenValuesImageType::Pointer eigenValues) const
+{
+  typename InputImageType::Pointer normOutput = InputImageType::New();
+  normOutput->SetRegions(rieszComponents->GetBufferedRegion());
+  normOutput->Allocate();
+  normOutput->FillBuffer(NumericTraits<InputImagePixelType>::Zero);
+
+  ImageRegionIterator<InputImageType> normOutputIt(
+    normOutput, normOutput->GetRequestedRegion());
+  ImageRegionConstIterator<RieszComponentsImageType> rieszIt(
+    rieszComponents, rieszComponents->GetRequestedRegion());
+  ImageRegionConstIterator<EigenValuesImageType> eigenValuesIt(
+    eigenValues, eigenValues->GetRequestedRegion());
+
+  InputImagePixelType localValue;
+  itk::VariableLengthVector<InputImagePixelType> localEigenValues;
+  localEigenValues.SetSize(ImageDimension);
+  DirectionType weights;
+  typename DirectionType::ValueType eigen_values_sum ;
+  for(rieszIt.GoToBegin(), eigenValuesIt.GoToBegin(),
+    normOutputIt.GoToBegin() ;
+    !rieszIt.IsAtEnd() ;
+    ++rieszIt, ++eigenValuesIt, ++normOutputIt )
+    {
+      eigen_values_sum = 0;
+      localValue = 0;
+      // Get the sum of eigenValues first
+      for (unsigned int i = 0 ; i < ImageDimension ; ++i)
+      {
+        localEigenValues[i] = eigenValuesIt.Get()[i];
+        eigen_values_sum += localEigenValues[i];
+      }
+      // std::cout << "Sum eigenValues: " << eigen_values_sum << std::endl;
+      // Compute the weighted norm using eigenValues
+      for (unsigned int i = 0 ; i < ImageDimension ; ++i)
+      {
+          weights[i] = localEigenValues[i] / eigen_values_sum;
+          localValue += localValue + rieszIt.Get()[i] * rieszIt.Get()[i] *
+            weights[i] * weights[i];
+          // std::cout << "Weight[" << i << "]: " << weights[i] <<
+          //   "localValue (temp)" << localValue << std::endl;
+      }
+
+      normOutputIt.Set( sqrt(localValue) );
+    }
+
+  return normOutput;
+}
+template< typename TInputImage>
+std::pair<
+  typename RieszImageFilter<TInputImage>::EigenVectorsImageType::Pointer,
+  typename RieszImageFilter<TInputImage>::EigenValuesImageType::Pointer >
+RieszImageFilter<TInputImage>
+::ComputeEigenAnalysisMaximizingRieszComponents(const unsigned int & gaussian_window_radius, const float & gaussian_window_sigma, const RieszComponentsImageType* rieszComponents) const
+{
   // For each pixel of eigenOut (size of TInput)
   //   For each RieszComponent:
-  //    Get neighborhood of each pixel of size equal to Gaussian Window.
-  //    Convolve neighborhood with the window.
-  //   Compute Matrix J (2D,Dimension x Dimension) using all convolved neighborhoods.
-  //   Compute eigenVectors and eigenValues of matrix.
-  //   Store them in eigenOutput.
+  // Use NeighborhoodIterator in RieszComponents using gaussian_radius
+  //  Weight value of pixels in the neighborhood using the GaussianImage
+  //
+  //  Compute Matrix (2D,Dimension x Dimension) eigenMatrix, which is the weighted contribution of the RieszComponents. J(x_0)[m][n] = Sum_each_neighbor_pixel_x(gaussian(x) * RieszComponent(x)[m] * RieszComponent(x)[n] )
+  //   Compute eigenVectors and eigenValues of the matrix.
+  //   Store them in the output.
 
-  // TODO look ImageVectorToImageAdaptor for using the GaussianOperator.
-  NeighborhoodInnerProduct<InputImageType> innerProduct;
-  GaussianOperator<typename InputImageType::PixelType, ImageDimension> gaussianOperator;
+  // Allocate outputs:
+
+  typename EigenVectorsImageType::Pointer eigenVectorsImage = EigenVectorsImageType::New();
+  typename EigenValuesImageType::Pointer eigenValuesImage = EigenValuesImageType::New();
+  eigenVectorsImage->SetRegions(this->GetInput()->GetBufferedRegion());
+  eigenVectorsImage->Allocate();
+  eigenValuesImage->SetRegions(this->GetInput()->GetBufferedRegion());
+  eigenValuesImage->Allocate();
+
+  // Set GaussianImageSource
   Size<ImageDimension> radius;
+  Size<ImageDimension> domainKernelSize;
   radius.Fill(gaussian_window_radius);
-  gaussianOperator.CreateToRadius(radius);
+  domainKernelSize.Fill(2 * gaussian_window_radius + 1);
+  typedef GaussianImageSource< InputImageType > GaussianSourceType;
+  typename GaussianSourceType::Pointer gaussianImage =
+    GaussianSourceType::New();
+  typename GaussianSourceType::ArrayType mean;
+  typename GaussianSourceType::ArrayType sigma;
 
-  ConstNeighborhoodIterator<RieszComponentsImageType> rieszNIt(
-      gaussianOperator.GetRadius(), rieszComponents,
+  const typename RieszComponentsImageType::SpacingType inputSpacing =
+    rieszComponents->GetSpacing();
+  const typename RieszComponentsImageType::PointType inputOrigin =
+    rieszComponents->GetOrigin();
+  gaussianImage->SetSize( domainKernelSize );
+  gaussianImage->SetSpacing(inputSpacing);
+  gaussianImage->SetOrigin(inputOrigin);
+  gaussianImage->SetScale(1.0);
+  gaussianImage->SetNormalized(true);
+
+  for ( unsigned int i = 0; i < ImageDimension; i++ )
+    {
+    mean[i] = inputSpacing[i] * radius[i] + inputOrigin[i]; // center pixel pos
+    sigma[i] = gaussian_window_sigma;
+    }
+  gaussianImage->SetSigma(sigma);
+  gaussianImage->SetMean(mean);
+  gaussianImage->Update();
+  std::cout << "GaussianImage" << std::endl;
+  visualize::VisualizeITKImage(gaussianImage->GetOutput());
+  // END Set GaussianImageSource
+
+  ImageRegionIterator<EigenVectorsImageType> eigenVectorsIt(
+      eigenVectorsImage,
+      eigenVectorsImage->GetRequestedRegion());
+  ImageRegionIterator<EigenValuesImageType> eigenValuesIt(
+      eigenValuesImage,
+      eigenValuesImage->GetRequestedRegion());
+  ConstNeighborhoodIterator<RieszComponentsImageType> rieszIt(
+      radius, rieszComponents,
       rieszComponents->GetRequestedRegion());
-  ImageRegionIterator<EigenImageType> eigenIt(
-      eigenOutputOriginal, eigenOutputOriginal->GetRequestedRegion());
+  ConstNeighborhoodIterator<typename GaussianSourceType::OutputImageType>
+    gaussianIt(
+      radius, gaussianImage->GetOutput(),
+      gaussianImage->GetOutput()->GetRequestedRegion());
 
-  // NeighborhoodInnerProduct<InputImageType> innerProduct;
-  // GaussianOperator<typename InputImageType::PixelType, ImageDimension> gaussianOperator;
-  // Size<ImageDimension> radius;
-  // radius.Fill(gaussian_window_radius);
-  // gaussianOperator.CreateToRadius(radius);
-  //
-  // ImageRegionIterator<EigenImageType> eigenIt(
-  //     eigenOutputOriginal, eigenOutputOriginal->GetRequestedRegion());
+  typedef itk::Matrix<RealType, ImageDimension,ImageDimension> EigenMatrixType;
+  typedef itk::FixedArray<RealType, ImageDimension> EigenValuesType;
+  typedef itk::SymmetricEigenAnalysis<EigenMatrixType, EigenValuesType> SymmetricEigenAnalysisType;
+  EigenMatrixType eigenMatrix;
+  EigenMatrixType eigenVectors;
+  EigenValuesType eigenValues;
+  SymmetricEigenAnalysisType eigenSystem(ImageDimension);
 
-  // ConstNeighborhoodIterator<RieszComponentsImageType> rieszIt(
-  //     gaussianOperator.GetRadius(), rieszComponents,
-  //     rieszComponents->GetRequestedRegion());
+  for(rieszIt.GoToBegin(), gaussianIt.GoToBegin(),
+    eigenVectorsIt.GoToBegin(), eigenValuesIt.GoToBegin() ;
+    !rieszIt.IsAtEnd() ;
+    ++rieszIt, ++eigenVectorsIt, ++eigenValuesIt )
+    {
+      //Set the matrix
+      eigenMatrix.Fill(0);
+      for (unsigned int r = 0 ; r <= gaussian_window_radius ; ++r)
+        for (unsigned int m = 0; m < ImageDimension ; ++m)
+          for (unsigned int n = m ; n < ImageDimension ; ++n)
+            if (r == 0)
+              eigenMatrix[m][n] = eigenMatrix[n][m] +=
+                gaussianIt.GetCenterPixel() +
+                rieszIt.GetCenterPixel()[m] + rieszIt.GetCenterPixel()[n];
+            else
+              for (unsigned int axis = 0 ; axis < ImageDimension ; ++axis)
+                {
+                eigenMatrix[m][n] = eigenMatrix[n][m] +=
+                  gaussianIt.GetNext(axis, r) +
+                  rieszIt.GetNext(axis,r)[m] + rieszIt.GetNext(axis,r)[n];
+                eigenMatrix[m][n] +=
+                  gaussianIt.GetPrevious(axis, r) +
+                  rieszIt.GetPrevious(r)[m] + rieszIt.GetPrevious(r)[n];
+                }
+      eigenSystem.ComputeEigenValuesAndVectors(eigenMatrix, eigenValues, eigenVectors );
+      // Copy to Output
+      eigenVectorsIt.Set(eigenVectors);
+      eigenValuesIt.Set(eigenValues);
 
-  while(!eigenIt.IsAtEnd())
-  {
+    } // end NeighborhoodIterator rieszIt
 
-    ++eigenIt;
-  }
-  // for(rieszIt.GoToBegin(), eigenIt.GoToBegin() ;
-  //     !rieszIt.IsAtEnd() ;
-  //     ++rieszIt , ++eigenIt)
-  // {
-  //   auto a = innerProduct(rieszIt, gaussianOperator);
-  //
-  //   eigenIt.Set();
-  // } // end NeighborhoodIterator rieszIt
+  return std::make_pair(eigenVectorsImage, eigenValuesImage);
+  // return eigenOutputOriginal;
+}
 
-  return eigenOutputOriginal;
+template< typename TInputImage>
+typename RieszImageFilter<TInputImage>::RieszComponentsImageType::Pointer
+RieszImageFilter<TInputImage>
+::ComputeRieszComponentsWithMaximumResponse(const typename EigenVectorsImageType::Pointer eigenVectors, const RieszComponentsImageType* rieszComponents ) const
+{
+  typename RieszComponentsImageType::Pointer maxLocalRiesz =
+    RieszComponentsImageType::New();
+  maxLocalRiesz->SetRegions(rieszComponents->GetLargestPossibleRegion());
+  maxLocalRiesz->SetVectorLength(ImageDimension);
+  maxLocalRiesz->Allocate();
+
+  ImageRegionIterator<RieszComponentsImageType> maxLocalRieszIt(
+    maxLocalRiesz, maxLocalRiesz->GetRequestedRegion());
+  ImageRegionConstIterator<RieszComponentsImageType> rieszIt(
+    rieszComponents, rieszComponents->GetRequestedRegion());
+  ImageRegionConstIterator<EigenVectorsImageType> eigenVectorsIt(
+    eigenVectors, eigenVectors->GetRequestedRegion());
+
+  itk::VariableLengthVector<InputImagePixelType> rieszProjection;
+  rieszProjection.SetSize(ImageDimension);
+  DirectionType direction;
+  for(rieszIt.GoToBegin(), eigenVectorsIt.GoToBegin(),
+    maxLocalRieszIt.GoToBegin() ;
+    !rieszIt.IsAtEnd() ;
+    ++rieszIt, ++eigenVectorsIt, ++maxLocalRieszIt )
+    {
+      for (unsigned int column = 0 ; column < ImageDimension ; ++column){
+        for (unsigned int i = 0 ; i < ImageDimension ; ++i)
+          direction[i] = eigenVectorsIt.Get()[i][column];
+        rieszProjection[column] = ComputeLocalRieszProjection(direction, rieszIt);
+      }
+      maxLocalRieszIt.Set( rieszProjection );
+    }
+
+  return maxLocalRiesz;
 }
 
 template< typename TInputImage>
@@ -400,6 +558,17 @@ RieszImageFilter<TInputImage>
   return output;
 
 }
+template< typename TInputImage>
+typename RieszImageFilter<TInputImage>::RealType
+RieszImageFilter<TInputImage>
+::ComputeLocalRieszProjection(const DirectionType & direction, const ImageConstIterator<RieszComponentsImageType> & rieszIt ) const
+{
+  RealType rieszProjection = 0;
+  for (unsigned int i = 0 ; i < ImageDimension ; ++i)
+    rieszProjection += direction[i] * rieszIt.Get()[i] ;
+  return rieszProjection;
+}
+
 template< typename TInputImage >
 void
 RieszImageFilter< TInputImage >
@@ -407,7 +576,7 @@ RieszImageFilter< TInputImage >
 {
   Superclass::PrintSelf(os, indent);
 
-  os << indent << "Sigma of Gaussian Derivative : " << m_SigmaGaussianDerivative 
+  os << indent << "Sigma of Gaussian Derivative : " << m_SigmaGaussianDerivative
      << std::endl;
   os << indent << "Size Square: " << m_inputSizeSquare <<  std::endl;
   os << indent << "Spacing Square: " << m_inputSpacingSquare << std::endl;
@@ -415,7 +584,7 @@ RieszImageFilter< TInputImage >
 
 template< typename TInputImage>
 DataObject::Pointer RieszImageFilter<TInputImage>
-::MakeOutput(unsigned int idx)
+::MakeOutput(DataObjectPointerArraySizeType idx)
 {
   DataObject::Pointer output;
 

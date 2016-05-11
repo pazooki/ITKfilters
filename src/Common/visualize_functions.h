@@ -10,10 +10,11 @@
 #include "itkImage.h"
 #include "itkImageToVTKImageFilter.h"
 #include "itkStatisticsImageFilter.h"
+#include <array>
 namespace visualize {
 template<typename T >
 void VisualizeITKImage(const T* img, size_t win_x = 600, size_t win_y = 600){
-      auto kDimension = T::ImageDimension;
+      const auto kDimension = T::ImageDimension;
       using ConnectorType = itk::ImageToVTKImageFilter<T> ;
       auto connector = ConnectorType::New();
       connector->SetInput(img);
@@ -47,7 +48,7 @@ void VisualizeITKImage(const T* img, size_t win_x = 600, size_t win_y = 600){
       auto window = max_intensity - min_intensity;
       auto level = min_intensity + window / 2;
     /** SLICES */
-      vtkSmartPointer<vtkImagePlaneWidget> slice_planes[kDimension];
+      std::array<vtkSmartPointer<vtkImagePlaneWidget>, kDimension> slice_planes;
       for (unsigned i = 0; i < kDimension; ++i) {
           slice_planes[i] = vtkSmartPointer<vtkImagePlaneWidget>::New();
           slice_planes[i]->SetResliceInterpolateToCubic();
@@ -79,8 +80,8 @@ void VisualizeITKImage(const T* img, size_t win_x = 600, size_t win_y = 600){
 template<typename TLeft, typename TRight >
 void VisualizeITKImages(const TLeft* leftImg, const TRight* rightImg,
             size_t win_x = 800, size_t win_y = 800){
-      auto leftDimension = TLeft::ImageDimension;
-      auto rightDimension = TRight::ImageDimension;
+      const auto leftDimension = TLeft::ImageDimension;
+      const auto rightDimension = TRight::ImageDimension;
 
 
       using LeftConnectorType = itk::ImageToVTKImageFilter<TLeft> ;
@@ -132,7 +133,7 @@ void VisualizeITKImages(const TLeft* leftImg, const TRight* rightImg,
       auto rightWindow = rightMax_intensity - rightMin_intensity;
       auto rightLevel = rightMin_intensity + rightWindow / 2;
       /** SLICES (BOTH) */
-      vtkSmartPointer<vtkImagePlaneWidget> leftSlice_planes[leftDimension];
+      std::array<vtkSmartPointer<vtkImagePlaneWidget>, leftDimension> leftSlice_planes;
       for (unsigned i = 0; i < leftDimension; ++i) {
           leftSlice_planes[i] = vtkSmartPointer<vtkImagePlaneWidget>::New();
           leftSlice_planes[i]->SetResliceInterpolateToCubic();
@@ -154,7 +155,7 @@ void VisualizeITKImages(const TLeft* leftImg, const TRight* rightImg,
           leftSlice_planes[i]->SetWindowLevel(leftWindow, leftLevel);
           leftSlice_planes[i]->On();
       }
-      vtkSmartPointer<vtkImagePlaneWidget> rightSlice_planes[rightDimension];
+      std::array<vtkSmartPointer<vtkImagePlaneWidget>, rightDimension> rightSlice_planes;
       for (unsigned i = 0; i < rightDimension; ++i) {
           rightSlice_planes[i] = vtkSmartPointer<vtkImagePlaneWidget>::New();
           rightSlice_planes[i]->SetResliceInterpolateToCubic();

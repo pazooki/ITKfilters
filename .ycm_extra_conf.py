@@ -15,22 +15,30 @@ flags = [
 '-Wall',
 '-Wextra',
 '-pedantic',
+'-isystem', '/usr/include/c++/6.1.1',
+'-isystem', '/usr/include/c++/6.1.1/x86_64-unknown-linux-gnu',
+'-isystem', '/usr/include/c++/6.1.1/backward',
+'-isystem', '/usr/local/include',
+'-isystem', '/usr/include',
+'-isystem', '/usr/lib/clang/3.7.1/include',
+# '-isystem', '/usr/lib64/gcc/x86_64-unknown-linux-gnu/6.1.1'
+'-march=x86-64',
+'-mtune=generic',
+'-O2',
+'-pipe',
+'-fstack-protector-strong',
+'-frounding-math',
+'-msse2',
+'-fopenmp',
+# '-O3',
+'-DNDEBUG',
+'-fPIC'
 '-DvtkRenderingCore_AUTOINIT=3(vtkInteractionStyle,vtkRenderingFreeType,vtkRenderingOpenGL)',
-'-I','./src',
-'-I','./src/Denoise',
-'-I','./src/Skeleton',
-'-I','./src/Quadrature',
-'-I','./src/Common',
-'-I','./build-release/gtest-src/include',
-'-I','./build-release',
-'-I/usr/include/freetype2',
-'-I/usr/include/vtk',
-'-I/opt/cuda/include/CL',
-'-I/home/phc/devtoolset/release/ITK/include/ITK-4.9',
 '-isystem', '/home/phc/devtoolset/release/include',
-'-I/usr/include/GraphicsMagick',
-'-I/usr/include/cairo',
-'-I/usr/local/include',
+'-isystem', '/usr/include/freetype2',
+'-isystem', '/opt/cuda/include/CL',
+'-isystem', '/usr/include/GraphicsMagick',
+'-isystem', '/usr/include/cairo',
 '-isystem', '/usr/include/eigen3',
 '-isystem', '/usr/include/qt',
 '-isystem', '/usr/include/qt/QtWidgets',
@@ -39,9 +47,17 @@ flags = [
 '-isystem', '/usr/lib/qt/mkspecs/linux-g++',
 '-isystem', '/usr/include/qt/QtOpenGL',
 '-isystem', '/usr/include/qt/QtXml',
-'-march=x86-64', '-mtune=generic', '-O2', '-pipe', '-fstack-protector-strong', '-frounding-math',
-'-std=c++11', '-msse2', '-fopenmp', '-O3', '-DNDEBUG',
-'-fPIC'
+'-I','./src',
+'-I','./src/Denoise',
+'-I','./src/Skeleton',
+'-I','./src/Quadrature',
+'-I','./src/Common',
+'-I','./build-release/gtest-src/include',
+'-I','./build-release',
+'-I', '/usr/include/vtk',
+'-I', '/home/phc/Software/ITK/build-development/my-install/include/ITK-4.10',
+# '-I/home/phc/devtoolset/release/ITK/include/ITK-4.9',
+# '-I/home/phc/devtoolset/release/VTK/include',
 ]
 #Template declaration in .ih files:
 #From: https://github.com/Valloric/YouCompleteMe/issues/1938#issuecomment-175411991
@@ -114,7 +130,7 @@ def MakeRelativePathsInFlagsAbsolute( flags, working_directory ):
 
 def IsHeaderFile( filename ):
   extension = os.path.splitext( filename )[ 1 ]
-  return extension in [ '.h', '.hxx', '.hpp', '.hh', '.ih' ]
+  return extension in [ '.h', '.hxx', '.hpp', '.hh', '.ih', '.txx' ]
 
 
 def GetCompilationInfoForFile( filename ):
