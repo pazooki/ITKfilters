@@ -1,6 +1,7 @@
 #include "gtest/gtest.h"
 #include <memory>
 #include <string>
+#include <cmath>
 #include "prog_options_test.h"
 #include "visualize_functions.h"
 #include "itkRieszImageFilter.h"
@@ -61,18 +62,35 @@ int main(int argc, char** argv){
     // riesz->SetInput(padFilter->GetOutput());
     riesz->SetInput(castFilter->GetOutput());
     riesz->Update();
+    // Get outputs
     auto realComponent = riesz->GetOutputReal();
     auto rieszComponents = riesz->GetOutputRieszComponents();
     auto rieszNorm  = riesz->GetOutputRieszNorm();
+    auto fftForward = riesz->GetOutputFFT();
+
+    typedef VectorIndexSelectionCastImageFilter<typename
+        RieszFilter::RieszComponentsImageType, OutImageType> CastIndexType;
+    // Visualize Riesz Components
+    typename CastIndexType::Pointer castIndex= CastIndexType::New();
+    castIndex->SetInput(rieszComponents);
+    castIndex->SetIndex(0);
+    std::cout << "RieszComponent[0] (x)" <<  std::endl;
+    if(VFLAG) visualize::VisualizeITKImage(castIndex->GetOutput());
+    castIndex->SetIndex(1);
+    std::cout << "RieszComponent[1] (y)" <<  std::endl;
+    if(VFLAG) visualize::VisualizeITKImage(castIndex->GetOutput());
+    castIndex->SetIndex(2);
+    castIndex->Update();
+    std::cout << "RieszComponent[2] (z)" <<  std::endl;
+    if(VFLAG) visualize::VisualizeITKImage(castIndex->GetOutput());
+    // Visualize Riesz Norm
     std::cout << "RieszNorm |Rx^2 + Ry^2 + Rz^2| of rieszComponents" << std::endl;
     if(VFLAG) visualize::VisualizeITKImage(rieszNorm);
 
-    // auto eigenImage = riesz->ComputeEigenVectorsMaximizingRieszComponents(3, 20.0, rieszComponents);
-
+    // Compute eigen system that locally maximizes rieszComponent
     auto eigenPair = riesz->ComputeEigenAnalysisMaximizingRieszComponents(3, 20.0f, rieszComponents);
     auto maxLocalRiesz = riesz->ComputeRieszComponentsWithMaximumResponse(eigenPair.first, rieszComponents);
     // if(VFLAG) visualize::VisualizeITKImages(maxLocalRiesz.GetPointer(), reader->GetOutput());
-    typedef VectorIndexSelectionCastImageFilter<typename RieszFilter::RieszComponentsImageType, OutImageType> CastIndexType;
     typename CastIndexType::Pointer castIndexMax= CastIndexType::New();
     castIndexMax->SetInput(maxLocalRiesz);
     castIndexMax->SetIndex(0);
@@ -149,16 +167,41 @@ int main(int argc, char** argv){
     // --- end of LocalPhase in unitary direction ---
 
     // if(VFLAG) visualize::VisualizeITKImages(realComponent, reader->GetOutput());
-    typename CastIndexType::Pointer castIndex= CastIndexType::New();
-    castIndex->SetInput(rieszComponents);
+    // Instead of gaussian Derivative, use wavelet function;
+    RieszFilter::SizeType inputSizeSquare    =
+        fftForward->GetBufferedRegion().GetSize() *
+        fftForward->GetBufferedRegion().GetSize();
+    // Spacing is a vector, and * perform inner product.
+    RieszFilter::SpacingType inputSpacingSquare = fftForward->GetSpacing();
+    for (unsigned int i = 0; i < RieszFilter::ImageDimension ; i++)
+        inputSpacingSquare[i] *= inputSpacingSquare[i];
+
+    const double pi = std::acos(-1);
+    // Create a shannon wavelet function
+    std::function<RieszFilter::InputImagePixelType(RieszFilter::InputImageType::PointType)> shannonWavelet = [&inputSizeSquare, &inputSpacingSquare, &pi](RieszFilter::InputImageType::PointType evalPoint)
+        {
+        RieszFilter::RealType w2 = 0;
+        for (unsigned int i = 0 ; i < RieszFilter::ImageDimension ; ++i)
+            w2 += ( inputSpacingSquare[i] /
+                static_cast<RieszFilter::RealType>(inputSizeSquare[i])) *
+                evalPoint[i] * evalPoint[i];
+        RieszFilter::InputImagePixelType w_mod = sqrt(w2);
+        if (w_mod <= pi || w_mod >= pi/2.0)
+            return 1;
+        else return 0;
+        };
+    std::cout << "Compute with shannon function" << std::endl;
+    auto rieszShannon = riesz->ComputeRieszComponentsWithFunction(shannonWavelet,fftForward);
+    std::cout << "RieszComponents with shannon wavelet" <<  std::endl;
+    castIndex->SetInput(rieszShannon);
     castIndex->SetIndex(0);
+    castIndex->Update();
     std::cout << "RieszComponent[0] (x)" <<  std::endl;
     if(VFLAG) visualize::VisualizeITKImage(castIndex->GetOutput());
     castIndex->SetIndex(1);
     std::cout << "RieszComponent[1] (y)" <<  std::endl;
     if(VFLAG) visualize::VisualizeITKImage(castIndex->GetOutput());
     castIndex->SetIndex(2);
-    castIndex->Update();
     std::cout << "RieszComponent[2] (z)" <<  std::endl;
     if(VFLAG) visualize::VisualizeITKImage(castIndex->GetOutput());
 }
