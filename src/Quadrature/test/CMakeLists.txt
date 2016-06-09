@@ -26,6 +26,15 @@ target_link_libraries(test_riesz.exe ${Boost_PROGRAM_OPTIONS_LIBRARY})
 target_link_libraries(test_riesz.exe ${VTK_LIBRARIES})
 target_link_libraries(test_riesz.exe Qt5::Widgets)
 
+# test_wavelet
+# add_executable(test_wavelet.exe test_wavelet.cpp /home/phc/Software/ITK/ITK-development/Modules/Filtering/Wavelet/src/itkWaveletGenerator.cxx)
+# set_source_files_properties (test_wavelet.exe PROPERTIES COMPILE_FLAGS "-Wno-sign-compare")
+# target_link_libraries(test_wavelet.exe gtest_main ${CMAKE_THREAD_LIBS_INIT})
+# target_link_libraries(test_wavelet.exe ${ITK_LIBRARIES})
+# target_link_libraries(test_wavelet.exe ${Boost_PROGRAM_OPTIONS_LIBRARY})
+# target_link_libraries(test_wavelet.exe ${VTK_LIBRARIES})
+# target_link_libraries(test_wavelet.exe Qt5::Widgets)
+# message( ${ITK_LIBRARIES})
 # add_custom_command(
 #     TARGET test_quadrature.exe PRE_BUILD
 #     COMMAND mkdir -p ${EXECUTABLE_OUTPUT_PATH}/testQuadrature

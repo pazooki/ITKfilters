@@ -19,6 +19,7 @@
 #define itkRieszImageFilter_hxx
 #include "visualize_functions.h" // TODO REMOVE
 #include <array>
+#include <itkSubtractImageFilter.h>
 #include "itkImageRegionIteratorWithIndex.h"
 #include "itkImageRegionConstIterator.h"
 #include "itkImageRegionIterator.h"
@@ -60,6 +61,7 @@ RieszImageFilter< TInputImage >
   this->SetNthOutput( 3, this->MakeOutput(3) );
 
   this->m_SigmaGaussianDerivative = 1.0;
+  this->m_StatisticsMean = 0.0;
 }
 
 template< typename TInputImage >
@@ -68,6 +70,11 @@ RieszImageFilter< TInputImage >
 ::GenerateData()
 {
 
+  typename StatisticsImageFilterType::Pointer statisticsImageFilter
+          = StatisticsImageFilterType::New ();
+  statisticsImageFilter->SetInput(this->GetInput());
+  statisticsImageFilter->Update();
+  this->m_StatisticsMean = statisticsImageFilter->GetMean();
   // // Create a process accumulator for tracking the progress of this minipipeline
   ProgressAccumulator::Pointer progress = ProgressAccumulator::New();
   progress->SetMiniPipelineFilter(this);
@@ -82,8 +89,17 @@ RieszImageFilter< TInputImage >
   normPart->SetRegions( normPart->GetRequestedRegion() );
   normPart->Allocate();
 
+  //Substract Mean value of image to every pixel to remove DC comp
+  typedef itk::SubtractImageFilter<InputImageType> SubtractFilterType;
+  typename SubtractFilterType::Pointer subtractFilter =
+    SubtractFilterType::New();
+  subtractFilter->SetInput(this->GetInput());
+  subtractFilter->SetConstant(this->m_StatisticsMean);
+  subtractFilter->Update();
+
   typename FFTFilterType::Pointer fftFilter = FFTFilterType::New();
-  fftFilter->SetInput( this->GetInput() );
+  // fftFilter->SetInput( this->GetInput() );
+  fftFilter->SetInput( subtractFilter->GetOutput());
   progress->RegisterInternalFilter(fftFilter, 1.0f);
   fftFilter->Update();
   std::cout << fftFilter->GetOutput()->GetBufferedRegion() << std::endl;
@@ -116,8 +132,8 @@ RieszImageFilter<TInputImage>
 ::ComputeRealComponent(const ComplexImageType* fftForward ) const
 {
   SizeType inputSizeSquare    =
-    fftForward->GetBufferedRegion().GetSize() *
-    fftForward->GetBufferedRegion().GetSize();
+    fftForward->GetLargestPossibleRegion().GetSize() *
+    fftForward->GetLargestPossibleRegion().GetSize();
   // Spacing is a vector, and * perform inner product.
   SpacingType inputSpacingSquare = fftForward->GetSpacing();
   for (unsigned int i = 0; i < ImageDimension ; i++)
@@ -253,7 +269,8 @@ RieszImageFilter<TInputImage>
         const unsigned int & NComponent) const
 {
 
-  // TODO assert that function_in_freq must be zero in w = (0,..0)
+  // Divergence of riesz components in freq zero:
+  // Solved substrating StatisticsMean to each pixel (DC component is zero)
   typename ComplexImageType::IndexType zero_index;
   SizeType inputSizeSquare    =
     fftForward->GetBufferedRegion().GetSize() *

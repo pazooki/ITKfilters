@@ -15,10 +15,10 @@
  *  limitations under the License.
  *
  *=========================================================================*/
-#ifndef itkRieszImageFilter_h
-#define itkRieszImageFilter_h
+#ifndef itkInverseWaveletFT_h
+#define itkInverseWaveletFT_h
 
-#include <itkImageToImageFilter.h>
+#include <itkImageToImageListFilter.h>
 #include <itkVectorImage.h>
 #include "itkStatisticsImageFilter.h"
 #include <itkImageConstIterator.h>
@@ -33,18 +33,18 @@
 
 namespace itk
 {
-/** \class RieszImageFilter
+/** \class InverseWaveletFT
  * @brief Analytical filter, analogous to Hilber transform in nD.
  *
  * \ingroup ITKBasicFilters
  */
 template< typename TInputImage >
-class RieszImageFilter:
-  public ImageToImageFilter< TInputImage, TInputImage>
+class InverseWaveletFT:
+  public ImageToImageListFilter< TInputImage, TInputImage>
 {
 public:
   /** Standard class typedefs. */
-  typedef RieszImageFilter                                Self;
+  typedef InverseWaveletFT                                       Self;
   typedef ImageToImageFilter< TInputImage, TInputImage >  Superclass;
   typedef SmartPointer< Self >                            Pointer;
   typedef SmartPointer< const Self >                      ConstPointer;
@@ -87,80 +87,12 @@ public:
   itkNewMacro(Self);
 
   /** Runtime information support. */
-  itkTypeMacro(RieszImageFilter,
+  itkTypeMacro(InverseWaveletFT,
                ImageToImageFilter);
 
-  itkSetMacro( SigmaGaussianDerivative, RealType );
-  itkGetConstMacro( SigmaGaussianDerivative, RealType );
-  itkGetConstMacro( StatisticsMean, StatisticsRealType );
-
-
-  TInputImage*              GetOutputReal();
-  RieszComponentsImageType* GetOutputRieszComponents();
-  TInputImage*              GetOutputRieszNorm();
-  ComplexImageType*         GetOutputFFT();
-
-  typename InputImageType::Pointer ComputeRieszProjection(
-      const DirectionType & direction,
-      const RieszComponentsImageType* rieszComponents ) const;
-
-  RealType ComputeLocalRieszProjection(
-      const DirectionType & direction,
-      const ImageConstIterator<RieszComponentsImageType> & rieszIt ) const;
-
-  typename InputImageType::Pointer ComputeLocalPhaseInDirection(
-      const DirectionType & unitary_direction,
-      const InputImageType* rieszReal,
-      const RieszComponentsImageType* rieszComponents) const;
-
-  typedef itk::Image<itk::Matrix<RealType,ImageDimension, ImageDimension>,
-          ImageDimension > EigenVectorsImageType;
-  typedef itk::Image<itk::FixedArray<RealType,ImageDimension>,
-          ImageDimension > EigenValuesImageType;
-
-  std::pair<
-        typename EigenVectorsImageType::Pointer,
-        typename EigenValuesImageType::Pointer >
-    ComputeEigenAnalysisMaximizingRieszComponents(
-        const unsigned int & gaussian_window_radius,
-        const float & gaussian_window_sigma,
-        const RieszComponentsImageType* rieszComponents) const;
-
-  typename RieszComponentsImageType::Pointer
-    ComputeRieszComponentsWithMaximumResponse(
-        const typename EigenVectorsImageType::Pointer eigenVectors,
-        const RieszComponentsImageType* rieszComponents) const;
-
-  typename InputImageType::Pointer ComputeRealComponent(
-      const ComplexImageType* fftForward) const;
-
-  typename InputImageType::Pointer ComputeLocalAmplitude(
-        const InputImageType* real_part,
-        const InputImageType* riesz_norm_part) const;
-
-  typename InputImageType::Pointer ComputeRieszWeightedNorm(
-      const RieszComponentsImageType* rieszComponents,
-      const DirectionType & weights) const;
-
-  typename InputImageType::Pointer ComputeRieszNorm(
-      const RieszComponentsImageType* rieszComponents) const;
-
-  typename InputImageType::Pointer ComputeRieszWeightedNormByEigenValues(
-      const RieszComponentsImageType* rieszComponents,
-      const typename EigenValuesImageType::Pointer eigenValues) const;
-
-  typename InputImageType::Pointer ComputeRieszComponentConvolvedWithFunction(
-        std::function<InputImagePixelType(
-          typename InputImageType::PointType)> function_in_freq,
-        const ComplexImageType* fftForward,
-        const unsigned int & NComponent) const;
-  typename RieszComponentsImageType::Pointer ComputeRieszComponentsWithFunction(
-      std::function<InputImagePixelType(
-        typename InputImageType::PointType)> function_in_freq,
-      const ComplexImageType* fftForward) const;
 protected:
-  RieszImageFilter();
-  ~RieszImageFilter() {}
+  InverseWaveletFT();
+  ~InverseWaveletFT() {}
   void PrintSelf(std::ostream & os, Indent indent) const ITK_OVERRIDE;
   /** Single-threaded version of GenerateData. */
   void GenerateData() ITK_OVERRIDE;
@@ -171,21 +103,12 @@ protected:
       DataObjectPointerArraySizeType idx) ITK_OVERRIDE;
 
 private:
-  RieszImageFilter(const Self &) ITK_DELETE_FUNCTION;
+  InverseWaveletFT(const Self &) ITK_DELETE_FUNCTION;
   void operator=(const Self &) ITK_DELETE_FUNCTION;
-  InputImagePixelType m_SigmaGaussianDerivative;
-  StatisticsRealType m_StatisticsMean;
-
-  typename InputImageType::Pointer ComputeRieszComponent(
-      const ComplexImageType* fftForward,
-      const unsigned int & NComponent) const;
-
-  typename RieszComponentsImageType::Pointer ComputeRieszComponents(
-      const ComplexImageType* fftForward) const;
 };
 } // end namespace itk
 #ifndef ITK_MANUAL_INSTANTIATION
-#include "itkRieszImageFilter.hxx"
+#include "itkInverseWaveletFT.hxx"
 #endif
 
 #endif

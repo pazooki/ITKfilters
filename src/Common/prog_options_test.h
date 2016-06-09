@@ -9,6 +9,7 @@ po::variables_map program_options(const int &argc, char** const & argv){
   po::options_description generic("Generic options");
   generic.add_options()
       ("visualize,v", po::bool_switch()->default_value(false), "Visualize output")
+      ("debug,d", po::bool_switch()->default_value(false), "Debug Flag")
       ;
 
   po::options_description cmdline_options;
