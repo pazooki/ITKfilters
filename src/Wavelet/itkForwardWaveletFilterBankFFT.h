@@ -48,7 +48,7 @@ class ForwardWaveletFilterBankFFT
 {
 public:
   /** Standard typedefs */
-  typedef ForwardWaveletFilterBankFFT                                Self;
+  typedef ForwardWaveletFilterBankFFT                        Self;
   typedef itk::ImageToImageFilter<TInputImage, TOutputImage> Superclass;
   typedef itk::SmartPointer<Self>                            Pointer;
   typedef itk::SmartPointer<const Self>                      ConstPointer;
@@ -66,20 +66,26 @@ public:
   typedef typename Superclass::OutputImagePointer     OutputImagePointer;
   typedef typename Superclass::InputImageConstPointer InputImageConstPointer;
 
-  typedef typename itk::ImageRegionIterator<OutputImageType> OutputRegionIterator;
+  typedef typename itk::ImageRegionIterator<OutputImageType>     OutputRegionIterator;
   typedef typename itk::ImageRegionConstIterator<InputImageType> InputRegionConstIterator;
+  typedef typename OutputImageType::RegionType                   OutputImageRegionType;
 
-  typedef typename OutputImageType::RegionType OutputImageRegionType;
-
-  typedef TWaveletFunction                         WaveletFunctionType;
+  typedef TWaveletFunction                                WaveletFunctionType;
   typedef typename WaveletFunctionType::FunctionValueType FunctionValueType;
 
   /** Dimension */
   itkStaticConstMacro(ImageDimension, unsigned int, TInputImage::ImageDimension);
 
+  /* Getters/Setters */
+  /* Members */
   itkGetMacro(ShrinkFactor, unsigned int);
   itkGetMacro(HighPassSubBands, unsigned int);
   void SetHighPassSubBands(unsigned int k);
+  /** Get Outputs *****/
+  OutputImagePointer GetOutputLowPass();
+  OutputImagePointer GetOutputHighPass();
+  OutputImagePointer GetOutputSubBand(unsigned int k);
+  std::vector<OutputImagePointer> GetOutputs();
 protected:
   ForwardWaveletFilterBankFFT();
   virtual ~ForwardWaveletFilterBankFFT() {}

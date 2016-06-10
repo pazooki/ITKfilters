@@ -10,13 +10,13 @@ include(${VTK_USE_FILE})
 find_package(Qt5 COMPONENTS Widgets)
 
 # test_wavelet
-add_executable(test_waveletFT.exe test_waveletFT.cpp)
-set_source_files_properties (test_waveletFT.exe PROPERTIES COMPILE_FLAGS "-Wno-sign-compare")
-target_link_libraries(test_waveletFT.exe gtest_main ${CMAKE_THREAD_LIBS_INIT})
-target_link_libraries(test_waveletFT.exe ${ITK_LIBRARIES})
-target_link_libraries(test_waveletFT.exe ${Boost_PROGRAM_OPTIONS_LIBRARY})
-target_link_libraries(test_waveletFT.exe ${VTK_LIBRARIES})
-target_link_libraries(test_waveletFT.exe Qt5::Widgets)
+add_executable(testWaveletFilterBankFFT.exe testWaveletFilterBankFFT.cpp)
+set_source_files_properties (testWaveletFilterBankFFT.exe PROPERTIES COMPILE_FLAGS "-Wno-sign-compare")
+target_link_libraries(testWaveletFilterBankFFT.exe gtest_main ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries(testWaveletFilterBankFFT.exe ${ITK_LIBRARIES})
+target_link_libraries(testWaveletFilterBankFFT.exe ${Boost_PROGRAM_OPTIONS_LIBRARY})
+target_link_libraries(testWaveletFilterBankFFT.exe ${VTK_LIBRARIES})
+target_link_libraries(testWaveletFilterBankFFT.exe Qt5::Widgets)
 message( ${ITK_LIBRARIES})
 # add_custom_command(
 #     TARGET test_quadrature.exe PRE_BUILD

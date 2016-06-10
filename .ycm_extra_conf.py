@@ -52,6 +52,7 @@ flags = [
 '-I','./src/Skeleton',
 '-I','./src/Quadrature',
 '-I','./src/Wavelet',
+'-I','./src/Wavelet/WaveletFunctions',
 '-I','./src/Common',
 '-I','./build-release/gtest-src/include',
 '-I','./build-release',

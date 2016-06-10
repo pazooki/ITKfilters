@@ -15,41 +15,40 @@
  *  limitations under the License.
  *
  *=========================================================================*/
-#ifndef itkInverseWaveletFTFilterBank_h
-#define itkInverseWaveletFTFilterBank_h
+#ifndef itkInverseWaveletFilterBankFFT_h
+#define itkInverseWaveletFilterBankFFT_h
 
-#include <itkImageToImageListFilter.h>
-#include <itkVectorImage.h>
-#include "itkStatisticsImageFilter.h"
 #include <itkImageConstIterator.h>
+#include <itkImageRegionIterator.h>
+#include <itkImageRegionConstIterator.h>
 #include <complex>
-#include <itkFixedArray.h>
-#include <itkSymmetricSecondRankTensor.h>
+#include <itkImageToImageFilter.h>
 
 namespace itk
 {
 
-/** \class InverseWaveletFTFilterBank
+/** \class InverseWaveletFilterBankFFT
  * \brief Low-pass / high-pass wavelet transformation.
  *
- * This implementation performs an inverse Wavelet transformation from a low-pass / high-pass images.
+ * This implementation performs a low-pass / high-pass wavelet transformation of an image.
  *
- * The output is the synthesis of the input low-pass/high-pass images.
+ * The output are two images, one low-pass and other high-pass, downsampled by DownSampleImageFactor.
  *
  * The wavelet operation is defined by an user chosen SpatialFunction
  * The Spatial Function can be in the frequency or spatial domain.
  *
- * \sa WaveletFTFilterBank
+ * \sa WaveletFT
+ * \sa SpatialFunction
  *
  * \ingroup ITKWavelet
  */
 template <class TInputImage, class TOutputImage, class TWaveletFunction>
-class InverseWaveletFTFilterBank
+class InverseWaveletFilterBankFFT
 : public itk::ImageToImageFilter<TInputImage, TOutputImage>
 {
 public:
   /** Standard typedefs */
-  typedef InverseWaveletFTFilterBank                                Self;
+  typedef InverseWaveletFilterBankFFT                        Self;
   typedef itk::ImageToImageFilter<TInputImage, TOutputImage> Superclass;
   typedef itk::SmartPointer<Self>                            Pointer;
   typedef itk::SmartPointer<const Self>                      ConstPointer;
@@ -58,39 +57,45 @@ public:
   itkNewMacro(Self);
 
   /** Creation through object factory macro */
-  itkTypeMacro(InverseWaveletFTFilterBank, ImageToImageFilter);
+  itkTypeMacro(InverseWaveletFilterBankFFT, ImageToImageFilter);
 
-  /** Template parameters typedefs */
-  typedef TInputImage                          InputImageType;
-  typedef typename InputImageType::Pointer     InputImagePointerType;
-  typedef typename InputImageType::RegionType  InputImageRegionType;
-  typedef typename InputImageType::SizeType    InputSizeType;
-  typedef typename InputImageType::IndexType   InputIndexType;
-  typedef typename InputImageType::PixelType   InputPixelType;
+  /** Inherit types from Superclass. */
+  typedef typename Superclass::InputImageType         InputImageType;
+  typedef typename Superclass::OutputImageType        OutputImageType;
+  typedef typename Superclass::InputImagePointer      InputImagePointer;
+  typedef typename Superclass::OutputImagePointer     OutputImagePointer;
+  typedef typename Superclass::InputImageConstPointer InputImageConstPointer;
 
-  typedef TOutputImage                         OutputImageType;
-  typedef typename OutputImageType::Pointer    OutputImagePointerType;
-  typedef typename OutputImageType::RegionType OutputImageRegionType;
-  typedef typename OutputImageType::SizeType   OutputSizeType;
-  typedef typename OutputImageType::IndexType  OutputIndexType;
-  typedef typename OutputImageType::PixelType  OutputPixelType;
+  typedef typename itk::ImageRegionIterator<OutputImageType>     OutputRegionIterator;
+  typedef typename itk::ImageRegionConstIterator<InputImageType> InputRegionConstIterator;
+  typedef typename OutputImageType::RegionType                   OutputImageRegionType;
 
-  typedef TWaveletFunction                     WaveletFunctionType;
+  typedef TWaveletFunction                                WaveletFunctionType;
+  typedef typename WaveletFunctionType::FunctionValueType FunctionValueType;
 
   /** Dimension */
   itkStaticConstMacro(ImageDimension, unsigned int, TInputImage::ImageDimension);
 
-  itkGetMacro(UpSampleImageFactor, unsigned int);
-  itkSetMacro(UpSampleImageFactor, unsigned int);
-
+  /* Getters/Setters */
+  /* Members */
+  itkGetMacro(ExpandFactor, unsigned int);
+  itkGetMacro(HighPassSubBands, unsigned int);
+  void SetHighPassSubBands(unsigned int k);
+  /* Set Inputs *****/
+  void SetInputLowPass(InputImagePointer imgP);
+  void SetInputHighPass(InputImagePointer imgP);
+  void SetInputSubBand(unsigned int k, InputImagePointer imgP);
+  void SetInputs(std::vector<InputImagePointer> inputVector);
 protected:
-  InverseWaveletFTFilterBank();
-  virtual ~InverseWaveletFTFilterBank() {}
+  InverseWaveletFilterBankFFT();
+  virtual ~InverseWaveletFilterBankFFT() {}
   void PrintSelf(std::ostream & os, Indent indent) const ITK_OVERRIDE;
 
-  /** InverseWaveletFTFilterBank produces images which are of
+  /************ OutputInformation *************/
+
+  /** InverseWaveletFilterBankFFT produces images which are of
    * different resolution and different pixel spacing than its input image.
-   * As such, InverseWaveletFTFilterBank needs to provide an
+   * As such, InverseWaveletFilterBankFFT needs to provide an
    * implementation for GenerateOutputInformation() in order to inform the
    * pipeline execution model.  The original documentation of this method is
    * below.
@@ -98,45 +103,44 @@ protected:
    */
   virtual void GenerateOutputInformation() ITK_OVERRIDE;
 
-  /** Given one output whose requested region has been set, this method sets
-   * the requested region for the remaining output images.  The original
-   * documentation of this method is below.
-   * \sa ProcessObject::GenerateOutputRequestedRegion()
-   */
-  virtual void GenerateOutputRequestedRegion(DataObject *output) ITK_OVERRIDE;
-
-  /** InverseWaveletFTFilterBank requires a larger input requested
+  /** InverseWaveletFilterBankFFT requires a larger input requested
    * region than the output requested regions to accommodate the shrinkage and
-   * smoothing operations. As such, InverseWaveletFTFilterBank needs
+   * smoothing operations. As such, InverseWaveletFilterBankFFT needs
    * to provide an implementation for GenerateInputRequestedRegion().  The
    * original documentation of this method is below.
    * \sa ProcessObject::GenerateInputRequestedRegion()
    */
   virtual void GenerateInputRequestedRegion() ITK_OVERRIDE;
 
+  /************ GenerateData *************/
+
   /** BeforeThreadedGenerateData.
    * It allocates also internal images
    */
-  virtual void BeforeThreadedGenerateData();
-
-  /** Generate data redefinition */
-  virtual void ThreadedGenerateData(const OutputImageRegionType& outputRegionForThread, itk::ThreadIdType threadId);
+  // virtual void BeforeThreadedGenerateData() ITK_OVERRIDE;
 
   /** AfterThreadedGenerateData.
    * It enforce memory destruction of internal images
    */
-  virtual void AfterThreadedGenerateData();
+  // virtual void AfterThreadedGenerateData() ITK_OVERRIDE;
 
-  unsigned int m_UpSampleImageFactor;
+  /** Generate data redefinition */
+  virtual void GenerateData() ITK_OVERRIDE;
+  // virtual void ThreadedGenerateData(
+  //     const OutputImageRegionType& outputRegionForThread,
+  //     itk::ThreadIdType threadId) ITK_OVERRIDE;
+  /************ Data Members *************/
 
+  unsigned int m_ExpandFactor;
+  unsigned int m_HighPassSubBands;
 private:
-  InverseWaveletFTFilterBank(const Self &) ITK_DELETE_FUNCTION;
+  InverseWaveletFilterBankFFT(const Self &) ITK_DELETE_FUNCTION;
   void operator=(const Self&) ITK_DELETE_FUNCTION;
 
 }; // end of class
 } // end namespace itk
 #ifndef ITK_MANUAL_INSTANTIATION
-#include "itkInverseWaveletFTFilterBank.hxx"
+#include "itkInverseWaveletFilterBankFFT.hxx"
 #endif
 
 #endif
