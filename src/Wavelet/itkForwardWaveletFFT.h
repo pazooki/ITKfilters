@@ -15,70 +15,49 @@
  *  limitations under the License.
  *
  *=========================================================================*/
-#ifndef itkWaveletFT_h
-#define itkWaveletFT_h
+#ifndef itkForwardWaveletFFT_h
+#define itkForwardWaveletFFT_h
 
-#include <itkImageToImageListFilter.h>
-#include <itkVectorImage.h>
-#include "itkStatisticsImageFilter.h"
+#include <itkForwardWaveletFilterBankFFT.h>
+#include "itkImageRegionConstIterator.h"
 #include <itkImageConstIterator.h>
 #include <complex>
 #include <itkFixedArray.h>
-#include <itkSymmetricSecondRankTensor.h>
-#include "itkRealToHalfHermitianForwardFFTImageFilter.h"
-#include "itkHalfHermitianToRealInverseFFTImageFilter.h"
-// #ifdef WITH_C++11
-#include <functional>
-// #endif
 
 namespace itk
 {
-/** \class WaveletFT
+/** \class ForwardWaveletFFT
  * @brief Wavelet analysis where input is an FFT image.
  * Aim to be Isotropic.
  *
  * \ingroup ITKWavelet
  */
-template< typename TInputImage >
-class WaveletFT:
-  public ImageToImageListFilter< TInputImage, TInputImage>
+template< class TInputImage, class TOutputImage, class TWaveletFilterBank >
+class ForwardWaveletFFT:
+  public ImageToImageFilter< TInputImage, TOutputImage>
 {
 public:
   /** Standard classs typedefs. */
-  typedef WaveletFT                                       Self;
-  typedef ImageToImageFilter< TInputImage, TInputImage >  Superclass;
+  typedef ForwardWaveletFFT                               Self;
+  typedef ImageToImageFilter< TInputImage, TOutputImage > Superclass;
   typedef SmartPointer< Self >                            Pointer;
   typedef SmartPointer< const Self >                      ConstPointer;
 
-  /** Some convenient typedefs. */
-  typedef TInputImage                             InputImageType;
-  typedef typename InputImageType::Pointer        InputImagePointer;
-  typedef typename InputImageType::ConstPointer   InputImageConstPointer;
-  typedef typename InputImageType::RegionType     InputImageRegionType;
-  typedef typename InputImageType::PixelType      InputImagePixelType;
-  typedef typename InputImageType::SpacingType    SpacingType;
-  typedef typename InputImageRegionType::SizeType SizeType;
-  // Intermediate calculations:
-  typedef Image<std::complex<InputImagePixelType>,
-          TInputImage::ImageDimension>            ComplexImageType;
-  typedef typename ComplexImageType::Pointer      ComplexImagePointer;
-  typedef typename ComplexImageType::ConstPointer ComplexImageConstPointer;
-  typedef typename ComplexImageType::RegionType   ComplexImageRegionType;
-  typedef typename ComplexImageType::PixelType    ComplexImagePixelType;
+  /** Inherit types from Superclass. */
+  typedef typename Superclass::InputImageType         InputImageType;
+  typedef typename Superclass::OutputImageType        OutputImageType;
+  typedef typename Superclass::InputImagePointer      InputImagePointer;
+  typedef typename Superclass::OutputImagePointer     OutputImagePointer;
+  typedef typename Superclass::InputImageConstPointer InputImageConstPointer;
 
-  typedef itk::StatisticsImageFilter<InputImageType> StatisticsImageFilterType;
-  typedef typename StatisticsImageFilterType::RealType StatisticsRealType;
+  typedef typename itk::ImageRegionIterator<OutputImageType>     OutputRegionIterator;
+  typedef typename itk::ImageRegionConstIterator<InputImageType> InputRegionConstIterator;
+  typedef typename OutputImageType::RegionType                   OutputImageRegionType;
 
-  typedef double RealType;
-  typedef FixedArray< RealType, TInputImage::ImageDimension > DirectionType;
-  typedef VectorImage< InputImagePixelType, TInputImage::ImageDimension >
-    RieszComponentsImageType;
-  typedef VectorImage< ComplexImagePixelType, TInputImage::ImageDimension >
-    ComplexRieszComponentsImageType;
-  typedef RealToHalfHermitianForwardFFTImageFilter < InputImageType>
-    FFTFilterType;
-  typedef HalfHermitianToRealInverseFFTImageFilter < ComplexImageType,
-          InputImageType> InverseFFTFilterType;
+  typedef TWaveletFilterBank                                  WaveletFilterBankType;
+  typedef typename WaveletFilterBankType::WaveletFunctionType WaveletFunctionType;
+  typedef typename WaveletFilterBankType::FunctionValueType   FunctionValueType;
+  typedef itk::ForwardWaveletFilterBankFFT<OutputImageType, OutputImageType, WaveletFunctionType> OutputWaveletFilterBankType;
 
   /** ImageDimension constants */
   itkStaticConstMacro(ImageDimension, unsigned int,
@@ -88,28 +67,31 @@ public:
   itkNewMacro(Self);
 
   /** Runtime information support. */
-  itkTypeMacro(WaveletFT,
+  itkTypeMacro(ForwardWaveletFFT,
                ImageToImageFilter);
+  void SetLevels(unsigned int n);
+  itkGetMacro(Levels, unsigned int);
+  void SetHighPassSubBands(unsigned int n);
+  itkGetMacro(HighPassSubBands, unsigned int);
 
 protected:
-  WaveletFT();
-  ~WaveletFT() {}
+  ForwardWaveletFFT();
+  ~ForwardWaveletFFT() {}
   void PrintSelf(std::ostream & os, Indent indent) const ITK_OVERRIDE;
   /** Single-threaded version of GenerateData. */
   void GenerateData() ITK_OVERRIDE;
-  using Superclass::MakeOutput;
-  typedef ProcessObject::DataObjectPointerArraySizeType
-    DataObjectPointerArraySizeType; /**  Create the Outputs */
-  virtual DataObject::Pointer MakeOutput(
-      DataObjectPointerArraySizeType idx) ITK_OVERRIDE;
 
+  unsigned int m_Levels;
+  unsigned int m_HighPassSubBands;
+  unsigned int m_TotalOutputs;
+  typename WaveletFilterBankType::Pointer m_FilterBank;
 private:
-  WaveletFT(const Self &) ITK_DELETE_FUNCTION;
+  ForwardWaveletFFT(const Self &) ITK_DELETE_FUNCTION;
   void operator=(const Self &) ITK_DELETE_FUNCTION;
 };
 } // end namespace itk
 #ifndef ITK_MANUAL_INSTANTIATION
-#include "itkWaveletFT.hxx"
+#include "itkForwardWaveletFFT.hxx"
 #endif
 
 #endif

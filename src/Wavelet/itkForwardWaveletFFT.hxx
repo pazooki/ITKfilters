@@ -15,154 +15,140 @@
  *  limitations under the License.
  *
  *=========================================================================*/
-#ifndef itkWaveletFT_hxx
-#define itkWaveletFT_hxx
-#include "visualize_functions.h" // TODO REMOVE
-#include <array>
-#include <itkSubtractImageFilter.h>
-#include "itkImageRegionIteratorWithIndex.h"
-#include "itkImageRegionConstIterator.h"
-#include "itkImageRegionIterator.h"
-#include "itkImageIterator.h"
-#include "itkWaveletFT.h"
-#include <itkComposeImageFilter.h>
-#include <itkVectorIndexSelectionCastImageFilter.h>
-#include <itkVectorImageToImageAdaptor.h>
-#include "itkMultiplyImageFilter.h"
-#include "itkImageDuplicator.h"
-#include "itkProgressAccumulator.h"
-#include <itkAddImageFilter.h>
-#include <itkSquareImageFilter.h>
-#include <itkMinimumMaximumImageCalculator.h>//For test max/min before sum.
-#include <itkSqrtImageFilter.h>
-#include <itkAtanImageFilter.h> // For phase studies
-#include <itkDivideImageFilter.h>
-// Eigen Calculations
-#include <itkImageRegionIterator.h>
-#include <itkImageRegionConstIterator.h>
-#include <itkConstNeighborhoodIterator.h>
-#include <itkNeighborhoodInnerProduct.h>
-#include <itkGaussianImageSource.h>
-#include <itkMatrix.h>
-#include <itkSymmetricEigenAnalysis.h>
-
+#ifndef itkForwardWaveletFFT_hxx
+#define itkForwardWaveletFFT_hxx
+#include "itkForwardWaveletFFT.h"
+#include <itkCastImageFilter.h>
+#include "visualize_functions.h" //TODO delete
+#include "itkInverseFFTImageFilter.h" // TODO delete
+#include "itkImage.h"
+#define __my_debug__ 1
 namespace itk
 {
-template< typename TInputImage >
-WaveletFT< TInputImage >
-::WaveletFT()
+template <typename TInputImage, typename TOutputImage, typename TWaveletFilterBank>
+ForwardWaveletFFT< TInputImage, TOutputImage, TWaveletFilterBank>
+::ForwardWaveletFFT()
 {
-  this->SetNumberOfRequiredOutputs(4);
   this->SetNumberOfRequiredInputs(1);
-
-  this->SetNthOutput( 0, this->MakeOutput(0) );
-  this->SetNthOutput( 1, this->MakeOutput(1) );
-  this->SetNthOutput( 2, this->MakeOutput(2) );
-  this->SetNthOutput( 3, this->MakeOutput(3) );
-
-  this->m_SigmaGaussianDerivative = 1.0;
-  this->m_StatisticsMean = 0.0;
+  this->m_Levels = 1;
+  this->m_HighPassSubBands = 1;
+  this->m_TotalOutputs = 1;
 }
 
-template< typename TInputImage >
-void
-WaveletFT< TInputImage >
-::GenerateData()
+template <typename TInputImage, typename TOutputImage, typename TWaveletFilterBank>
+void ForwardWaveletFFT<TInputImage, TOutputImage, TWaveletFilterBank>
+::SetLevels(unsigned int n)
 {
+  unsigned int current_outputs = static_cast<unsigned int>(
+     (1 - static_cast<int>(std::pow( this->m_HighPassSubBands + 1, this->m_Levels + 1 )) ) / (1 - static_cast<int>(m_HighPassSubBands + 1)) - 1 );
 
-  typename StatisticsImageFilterType::Pointer statisticsImageFilter
-          = StatisticsImageFilterType::New ();
-  statisticsImageFilter->SetInput(this->GetInput());
-  statisticsImageFilter->Update();
-  this->m_StatisticsMean = statisticsImageFilter->GetMean();
-  // // Create a process accumulator for tracking the progress of this minipipeline
-  ProgressAccumulator::Pointer progress = ProgressAccumulator::New();
-  progress->SetMiniPipelineFilter(this);
-  // Allocate the outputs
-  InputImageType* evenPart = this->GetOutputReal();
-  evenPart->SetRegions( evenPart->GetLargestPossibleRegion() );
-  evenPart->Allocate();
-  RieszComponentsImageType* rieszComponents = this->GetOutputRieszComponents();
-  rieszComponents->SetRegions( rieszComponents->GetRequestedRegion() );
-  rieszComponents->Allocate();
-  InputImageType* normPart = this->GetOutputRieszNorm();
-  normPart->SetRegions( normPart->GetRequestedRegion() );
-  normPart->Allocate();
+  if ( this->m_TotalOutputs == current_outputs && this->m_Levels == n )
+    {
+    return;
+    }
 
-  //Substract Mean value of image to every pixel to remove DC comp
-  typedef itk::SubtractImageFilter<InputImageType> SubtractFilterType;
-  typename SubtractFilterType::Pointer subtractFilter =
-    SubtractFilterType::New();
-  subtractFilter->SetInput(this->GetInput());
-  subtractFilter->SetConstant(this->m_StatisticsMean);
-  subtractFilter->Update();
+  this->m_Levels = n;
+  this->m_TotalOutputs = static_cast<unsigned int>(
+     (1 - static_cast<int>(std::pow( this->m_HighPassSubBands + 1, this->m_Levels + 1 )) ) / (1 - static_cast<int>(m_HighPassSubBands + 1)) - 1 );
 
-  typename FFTFilterType::Pointer fftFilter = FFTFilterType::New();
-  // fftFilter->SetInput( this->GetInput() );
-  fftFilter->SetInput( subtractFilter->GetOutput());
-  progress->RegisterInternalFilter(fftFilter, 1.0f);
-  fftFilter->Update();
-  std::cout << fftFilter->GetOutput()->GetBufferedRegion() << std::endl;
-  typename ComplexImageType::Pointer fftForward = this->GetOutputFFT();
-  fftForward->SetRegions(fftFilter->GetOutput()->GetRequestedRegion());
-  fftForward->Allocate();
-  // fftForward = fftFilter->GetOutput();
-  ImageAlgorithm::Copy(fftFilter->GetOutput(), fftForward.GetPointer(),
-      fftFilter->GetOutput()->GetRequestedRegion(), fftFilter->GetOutput()->GetRequestedRegion());
+  this->SetNumberOfRequiredOutputs( this->m_TotalOutputs );
+  this->Modified();
 
-  // this->PrintSelf(std::cout,2);
-
-  std::cout << "RealComponent" << std::endl;
-  InputImagePointer realC = this->ComputeRealComponent(fftForward);
-  this->GetOutputReal()->Graft(realC);
-  std::cout << "RieszComponents" << std::endl;
-  // RIESZ OUTPUTS
-  typename RieszComponentsImageType::Pointer rieszC =
-    this->ComputeRieszComponents(fftForward);
-  this->GetOutputRieszComponents()->Graft(rieszC);
-  std::cout << "RieszNorm" << std::endl;
-  InputImagePointer norm = this->ComputeRieszNorm(rieszC);
-  this->GetOutputRieszNorm()->Graft(norm);
-  std::cout << "End GenerateData" << std::endl;
+  for (unsigned int n_output = 0; n_output < this->m_TotalOutputs; ++n_output)
+  {
+    this->SetNthOutput(n_output, this->MakeOutput(n_output));
+  }
 }
 
-template< typename TInputImage >
-void
-WaveletFT< TInputImage >
+template <typename TInputImage, typename TOutputImage, typename TWaveletFilterBank>
+void ForwardWaveletFFT<TInputImage, TOutputImage, TWaveletFilterBank>
+::SetHighPassSubBands(unsigned int k)
+{
+  if ( this->m_HighPassSubBands == k )
+    {
+    return;
+    }
+  this->m_HighPassSubBands = k;
+  // Trigger setting new number of outputs avoiding code duplication
+  this->SetLevels(this->m_Levels);
+}
+
+template <typename TInputImage, typename TOutputImage, typename TWaveletFilterBank >
+void ForwardWaveletFFT< TInputImage, TOutputImage, TWaveletFilterBank>
 ::PrintSelf(std::ostream & os, Indent indent) const
 {
   Superclass::PrintSelf(os, indent);
-
-  os << indent << "Sigma of Gaussian Derivative : " << m_SigmaGaussianDerivative
-     << std::endl;
+  os << indent <<
+    " Levels: " << this->m_Levels <<
+    " HighPassSubBands: " << this->m_HighPassSubBands <<
+    " TotalOutputs: " << this->m_TotalOutputs <<
+    std::endl;
 }
 
-template< typename TInputImage>
-DataObject::Pointer WaveletFT<TInputImage>
-::MakeOutput(DataObjectPointerArraySizeType idx)
+template <typename TInputImage, typename TOutputImage, typename TWaveletFilterBank>
+void ForwardWaveletFFT< TInputImage, TOutputImage, TWaveletFilterBank>
+::GenerateData()
 {
-  DataObject::Pointer output;
+  InputImageConstPointer input = this->GetInput();
+  this->AllocateOutputs();
 
-  switch ( idx )
+  std::vector<std::vector<OutputImagePointer>> outputsPerLevel;
+  std::vector<OutputImagePointer> outputList;
+  std::vector<OutputRegionIterator> outputItList;
+  typedef itk::CastImageFilter<InputImageType, OutputImageType> CastFilterType;
+  typename CastFilterType::Pointer castFilter = CastFilterType::New();
+  castFilter->SetInput(input);
+  // First level:
+  unsigned int ilevel = 0;
+  typename WaveletFilterBankType::Pointer filterBank = WaveletFilterBankType::New();
+  filterBank->SetHighPassSubBands(this->m_HighPassSubBands);
+  filterBank->SetInput(castFilter->GetOutput());
+  filterBank->Update();
+  outputsPerLevel.push_back( filterBank->GetOutputs() );
+  ++ilevel;
+
+  for (; ilevel < this->m_Levels; ++ilevel)
     {
-    case 0:
-      output = ( InputImageType::New() ).GetPointer();
-      break;
-    case 1:
-      output = ( RieszComponentsImageType::New() ).GetPointer();
-      break;
-    case 2:
-      output = ( InputImageType::New() ).GetPointer();
-      break;
-    case 3:
-      output = ( ComplexImageType::New() ).GetPointer();
-      break;
-    default:
-      std::cerr << "No output " << idx << std::endl;
-      output = NULL;
-      break;
+    for(unsigned int band = 0 ; band < this->m_HighPassSubBands + 1 ; ++band)
+      {
+      typename WaveletFilterBankType::Pointer filterBank = WaveletFilterBankType::New();
+      filterBank->SetHighPassSubBands(this->m_HighPassSubBands);
+      filterBank->SetInput(outputsPerLevel[ilevel - 1][band]);
+      filterBank->Update();
+      std::vector<OutputImagePointer> outputsPerBand = filterBank->GetOutputs();
+      if (band == 0)
+        outputsPerLevel.push_back(outputsPerBand);
+      else
+      outputsPerLevel[ilevel].insert(
+        outputsPerLevel[ilevel].end(),
+        outputsPerBand.begin(),
+        outputsPerBand.end());
+      }
     }
-  return output.GetPointer();
+
+  for (unsigned int level = 0, n_out_old_level = 0; level < this->m_Levels; ++level)
+    {
+    unsigned int n_out_current_level = static_cast<unsigned int>(std::pow(this->m_HighPassSubBands + 1, level + 1));
+    for (unsigned int i = 0 ; i < n_out_current_level; ++i)
+      {
+      this->GraftNthOutput(n_out_old_level + i, outputsPerLevel[level][i] );
+#if __my_debug__ // TODO DELETE
+      std::cout << outputsPerLevel[level][i]->GetBufferedRegion() << std::endl;
+      typedef itk::InverseFFTImageFilter<OutputImageType, itk::Image<double, ImageDimension> > InverseFFTFilterType;
+      typename InverseFFTFilterType::Pointer inverseFFT = InverseFFTFilterType::New();
+      inverseFFT->SetInput(outputsPerLevel[level][i]);
+      inverseFFT->Update();
+      std::cout <<"NBands:" << this->m_HighPassSubBands + 1 <<  " ;; (Level, output) = " << level << " , " << i << " Sublevel: " << i/(this->m_HighPassSubBands + 1) << " SubOutput: " << i%(this->m_HighPassSubBands +1)<< std::endl;
+      visualize::VisualizeITKImage(inverseFFT->GetOutput());
+#endif
+      }
+#if __my_debug__ // TODO DELETE
+  std::cout <<"m_Levels : " << this->m_Levels << " Level: " << level << " size: " << outputsPerLevel[level].size() <<std::endl;
+#endif
+    n_out_old_level = n_out_current_level;
+    }
+
+
 }
 
 } // end namespace itk

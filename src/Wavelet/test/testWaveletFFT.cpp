@@ -5,8 +5,8 @@
 #include "prog_options_test.h"
 #include "itkImage.h"
 #include "itkImageFileReader.h"
-#include "itkForwardWaveletFilterBankFFT.h"
-#include "itkInverseWaveletFilterBankFFT.h"
+#include "itkForwardWaveletFFT.h"
+// #include "itkInverseWaveletFFT.h"
 #include "itkHeldWavelet.h"
 #include "itkForwardFFTImageFilter.h"
 #include "itkInverseFFTImageFilter.h"
@@ -38,31 +38,36 @@ int main(int argc, char** argv){
     typedef itk::HeldWavelet<> WaveletFunctionType;
     // One Step Filter Bank
     typedef itk::ForwardWaveletFilterBankFFT<ComplexImageType, ComplexImageType, WaveletFunctionType> ForwardWaveletFilterBankType;
-    typename ForwardWaveletFilterBankType::Pointer forwardWavelet = ForwardWaveletFilterBankType::New();
+    typedef itk::ForwardWaveletFFT<ComplexImageType, ComplexImageType, ForwardWaveletFilterBankType> ForwardWaveletType;
+    typename ForwardWaveletType::Pointer forwardWavelet = ForwardWaveletType::New();
     unsigned int high_sub_bands = 2;
+    unsigned int levels = 2;
     forwardWavelet->SetHighPassSubBands(high_sub_bands);
+    forwardWavelet->SetLevels(levels);
     forwardWavelet->SetInput(fftFilter->GetOutput());
     forwardWavelet->SetDebug(DEBUG);
-    forwardWavelet->Update();
+
     auto lowPassImage = forwardWavelet->GetOutput(0);
+    auto highPassImage = forwardWavelet->GetOutput(high_sub_bands);
     cout << lowPassImage->GetLargestPossibleRegion() << endl;
-    // auto highPassImage = forwardWavelet->GetOutput(high_sub_bands);
-    // cout << highPassImage->GetLargestPossibleRegion() << endl;
-    // auto bandImage = forwardWavelet->GetOutputSubBand(1);
-    // cout << bandImage->GetLargestPossibleRegion() << endl;
-    //
-    // // Inverse FFT Transform
-    // typedef itk::InverseFFTImageFilter<ComplexImageType, ImageType> InverseFFTFilterType;
-    // typename InverseFFTFilterType::Pointer inverseFFT = InverseFFTFilterType::New();
-    // inverseFFT->SetInput(lowPassImage);
-    // inverseFFT->Update();
-    // if(VFLAG) visualize::VisualizeITKImage(inverseFFT->GetOutput());
-    // inverseFFT->SetInput(highPassImage);
-    // inverseFFT->Update();
-    // if(VFLAG) visualize::VisualizeITKImage(inverseFFT->GetOutput());
-    // inverseFFT->SetInput(bandImage);
-    // inverseFFT->Update();
-    // if(VFLAG) visualize::VisualizeITKImage(inverseFFT->GetOutput());
+    cout << highPassImage->GetLargestPossibleRegion() << endl;
+    auto bandImage = forwardWavelet->GetOutput(1);
+    cout << bandImage->GetLargestPossibleRegion() << endl;
+    // auto level2Image = forwardWavelet->GetOutput(4);
+
+    // Inverse FFT Transform
+    typedef itk::InverseFFTImageFilter<ComplexImageType, ImageType> InverseFFTFilterType;
+    typename InverseFFTFilterType::Pointer inverseFFT = InverseFFTFilterType::New();
+    inverseFFT->SetInput(lowPassImage);
+    inverseFFT->Update();
+
+    if(VFLAG) visualize::VisualizeITKImage(inverseFFT->GetOutput());
+    inverseFFT->SetInput(highPassImage);
+    inverseFFT->Update();
+    if(VFLAG) visualize::VisualizeITKImage(inverseFFT->GetOutput());
+    inverseFFT->SetInput(bandImage);
+    inverseFFT->Update();
+    if(VFLAG) visualize::VisualizeITKImage(inverseFFT->GetOutput());
     //
     // // Inverse Wavelet Transform
     // typedef itk::InverseWaveletFilterBankFFT<ComplexImageType, ComplexImageType, WaveletFunctionType> InverseWaveletFilterBankType;

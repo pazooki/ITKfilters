@@ -91,34 +91,6 @@ protected:
   virtual ~ForwardWaveletFilterBankFFT() {}
   void PrintSelf(std::ostream & os, Indent indent) const ITK_OVERRIDE;
 
-  /************ OutputInformation *************/
-
-  /** ForwardWaveletFilterBankFFT produces images which are of
-   * different resolution and different pixel spacing than its input image.
-   * As such, ForwardWaveletFilterBankFFT needs to provide an
-   * implementation for GenerateOutputInformation() in order to inform the
-   * pipeline execution model.  The original documentation of this method is
-   * below.
-   * \sa ProcessObject::GenerateOutputInformaton()
-   */
-  virtual void GenerateOutputInformation() ITK_OVERRIDE;
-
-  /** Given one output whose requested region has been set, this method sets
-   * the requested region for the remaining output images.  The original
-   * documentation of this method is below.
-   * \sa ProcessObject::GenerateOutputRequestedRegion()
-   */
-  virtual void GenerateOutputRequestedRegion(DataObject *output) ITK_OVERRIDE;
-
-  /** ForwardWaveletFilterBankFFT requires a larger input requested
-   * region than the output requested regions to accommodate the shrinkage and
-   * smoothing operations. As such, ForwardWaveletFilterBankFFT needs
-   * to provide an implementation for GenerateInputRequestedRegion().  The
-   * original documentation of this method is below.
-   * \sa ProcessObject::GenerateInputRequestedRegion()
-   */
-  virtual void GenerateInputRequestedRegion() ITK_OVERRIDE;
-
   /************ GenerateData *************/
 
   /** BeforeThreadedGenerateData.
