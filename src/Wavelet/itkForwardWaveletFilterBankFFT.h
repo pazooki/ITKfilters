@@ -80,6 +80,8 @@ public:
   /* Members */
   itkGetMacro(ShrinkFactor, unsigned int);
   itkGetMacro(HighPassSubBands, unsigned int);
+  itkGetMacro(ScaleFactor, unsigned int);
+  itkSetMacro(ScaleFactor, unsigned int);
   void SetHighPassSubBands(unsigned int k);
   /** Get Outputs *****/
   OutputImagePointer GetOutputLowPass();
@@ -110,8 +112,15 @@ protected:
   //     itk::ThreadIdType threadId) ITK_OVERRIDE;
   /************ Data Members *************/
 
+  /** Shrink Factor, default is 2, dyadic dilation.
+   * @note this implementation is undecimated, so the output images have
+   * the same size than the input, independently of the ShrinkFactor */
   unsigned int m_ShrinkFactor;
+  /** Number of M-Bands decomposition of the high pass filters */
   unsigned int m_HighPassSubBands;
+  /** Scale Factor, defaults to 1, used optionally to dilate the filter bank in
+   * a multiresolution (multi-level) analysis. */
+  unsigned int m_ScaleFactor;
 private:
   ForwardWaveletFilterBankFFT(const Self &) ITK_DELETE_FUNCTION;
   void operator=(const Self&) ITK_DELETE_FUNCTION;

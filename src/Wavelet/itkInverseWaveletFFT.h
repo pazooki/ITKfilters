@@ -44,7 +44,7 @@ class InverseWaveletFT:
 {
 public:
   /** Standard class typedefs. */
-  typedef InverseWaveletFT                                       Self;
+  typedef InverseWaveletFT                                Self;
   typedef ImageToImageFilter< TInputImage, TInputImage >  Superclass;
   typedef SmartPointer< Self >                            Pointer;
   typedef SmartPointer< const Self >                      ConstPointer;

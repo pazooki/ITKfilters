@@ -202,6 +202,7 @@ int main(int argc, char** argv){
     std::cout << "RieszComponent[1] (y)" <<  std::endl;
     if(VFLAG) visualize::VisualizeITKImage(castIndex->GetOutput());
     castIndex->SetIndex(2);
+    castIndex->Update();
     std::cout << "RieszComponent[2] (z)" <<  std::endl;
     if(VFLAG) visualize::VisualizeITKImage(castIndex->GetOutput());
 }
