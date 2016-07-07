@@ -15,16 +15,16 @@
  *  limitations under the License.
  *
  *=========================================================================*/
-#ifndef itkWaveletFunction_h
-#define itkWaveletFunction_h
+#ifndef itkIsotropicWaveletFrequencyFunction_h
+#define itkIsotropicWaveletFrequencyFunction_h
 
 #include "itkSpatialFunction.h"
 #include "itkFloatTypes.h"
 
 namespace itk
 {
-/** \class WaveletFunction
- * Abstract class for WaveletFunction.
+/** \class IsotropicWaveletFrequencyFunction
+ * Abstract class for IsotropicWaveletFrequencyFunction.
  * The interface consists on EvaluateAlgo functions.
  * Where Algo can be:
  *  Function: MotherWavelet response.
@@ -50,18 +50,18 @@ namespace itk
 template< typename TFunctionValue = double,
           unsigned int VImageDimension = 3,
           typename TInput = Point< SpacePrecisionType, VImageDimension > >
-class WaveletFunction:
+class IsotropicWaveletFrequencyFunction:
   public SpatialFunction< TFunctionValue, VImageDimension, TInput >
 {
 public:
   /** Standard class typedefs. */
-  typedef WaveletFunction                                     Self;
+  typedef IsotropicWaveletFrequencyFunction                                     Self;
   typedef SpatialFunction< TFunctionValue, VImageDimension, TInput > Superclass;
   typedef SmartPointer< Self >                                Pointer;
   typedef SmartPointer< const Self >                          ConstPointer;
 
   /** Run-time type information (and related methods). */
-  itkTypeMacro(WaveletFunction, SpatialFunction);
+  itkTypeMacro(IsotropicWaveletFrequencyFunction, SpatialFunction);
 
   /** Input type for the function. */
   typedef typename Superclass::InputType InputType;
@@ -101,22 +101,22 @@ public:
   itkGetConstMacro(HighPassSubBands, unsigned int);
 
 protected:
-  WaveletFunction();
-  virtual ~WaveletFunction();
+  IsotropicWaveletFrequencyFunction();
+  virtual ~IsotropicWaveletFrequencyFunction();
   virtual void PrintSelf(std::ostream & os, Indent indent) const;
   /** Number of HighPassSubBands in the high filter decomposition.
    * Default to one HighPass filter (no subbands) */
   unsigned int m_HighPassSubBands;
 
 private:
-  WaveletFunction(const Self &) ITK_DELETE_FUNCTION;
+  IsotropicWaveletFrequencyFunction(const Self &) ITK_DELETE_FUNCTION;
   void operator=(const Self &) ITK_DELETE_FUNCTION;
 
 };
 } // end namespace itk
 
 #ifndef ITK_MANUAL_INSTANTIATION
-#include "itkWaveletFunction.hxx"
+#include "itkIsotropicWaveletFrequencyFunction.hxx"
 #endif
 
 #endif

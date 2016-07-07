@@ -15,6 +15,23 @@
  *  limitations under the License.
  *
  *=========================================================================*/
+/***** TEST ***
+    //TODO apply this after forward one step.
+    std::cout << "Inverse Wavelet" << std::endl;
+    // // Inverse Wavelet Transform
+    // typedef itk::InverseWaveletFilterBankFFT<ComplexImageType, ComplexImageType, WaveletFunctionType> InverseWaveletFilterBankType;
+    // typename InverseWaveletFilterBankType::Pointer inverseWavelet = InverseWaveletFilterBankType::New();
+    // inverseWavelet->SetHighPassSubBands(high_sub_bands);
+    // inverseWavelet->SetInputs(forwardWavelet->GetOutputs());
+    // inverseWavelet->SetDebug(DEBUG);
+    // inverseWavelet->Update();
+    // // Visualize inverse
+    // inverseFFT->SetInput(inverseWavelet->GetOutput());
+    // inverseFFT->Update();
+    // // Compare these two in itk_test
+    // if(VFLAG) visualize::VisualizeITKImage(inverseFFT->GetOutput());
+    // if(VFLAG) visualize::VisualizeITKImage(reader->GetOutput());
+**/
 #ifndef itkInverseWaveletFilterBankFFT_h
 #define itkInverseWaveletFilterBankFFT_h
 
@@ -22,15 +39,15 @@
 #include <itkImageRegionIterator.h>
 #include <itkImageRegionConstIterator.h>
 #include <complex>
-#include <itkImageToImageFilter.h>
+#include <itkGenerateImageSource.h>
 
 namespace itk
 {
 
-/** \class InverseWaveletFilterBankFFT
- * \brief Low-pass / high-pass wavelet transformation.
+/** \class ForwardWaveletFilterBankFFT
+ * \brief Generate filter bank of inverse wavelet images.
  *
- * This implementation performs a low-pass / high-pass wavelet transformation of an image.
+ * This implementation generates a low-pass / high-pass wavelet filter .
  *
  * The output are two images, one low-pass and other high-pass, downsampled by DownSampleImageFactor.
  *
@@ -42,44 +59,42 @@ namespace itk
  *
  * \ingroup ITKWavelet
  */
-template <class TInputImage, class TOutputImage, class TWaveletFunction>
+template < class TOutputImage, class TWaveletFunction>
 class InverseWaveletFilterBankFFT
-: public itk::ImageToImageFilter<TInputImage, TOutputImage>
+: public itk::GenerateImageSource< TOutputImage >
 {
 public:
   /** Standard typedefs */
-  typedef InverseWaveletFilterBankFFT                        Self;
-  typedef itk::ImageToImageFilter<TInputImage, TOutputImage> Superclass;
-  typedef itk::SmartPointer<Self>                            Pointer;
-  typedef itk::SmartPointer<const Self>                      ConstPointer;
+  typedef ForwardWaveletFilterBankFFT            Self;
+  typedef itk::GenerateImageSource<TOutputImage> Superclass;
+  typedef itk::SmartPointer<Self>                Pointer;
+  typedef itk::SmartPointer<const Self>          ConstPointer;
 
   /** Type macro */
   itkNewMacro(Self);
 
   /** Creation through object factory macro */
-  itkTypeMacro(InverseWaveletFilterBankFFT, ImageToImageFilter);
+  itkTypeMacro(InverseWaveletFilterBankFFT, GenerateImageSource);
 
   /** Inherit types from Superclass. */
-  typedef typename Superclass::InputImageType         InputImageType;
   typedef typename Superclass::OutputImageType        OutputImageType;
-  typedef typename Superclass::InputImagePointer      InputImagePointer;
   typedef typename Superclass::OutputImagePointer     OutputImagePointer;
-  typedef typename Superclass::InputImageConstPointer InputImageConstPointer;
 
   typedef typename itk::ImageRegionIterator<OutputImageType>     OutputRegionIterator;
-  typedef typename itk::ImageRegionConstIterator<InputImageType> InputRegionConstIterator;
   typedef typename OutputImageType::RegionType                   OutputImageRegionType;
 
   typedef TWaveletFunction                                WaveletFunctionType;
   typedef typename WaveletFunctionType::FunctionValueType FunctionValueType;
 
   /** Dimension */
-  itkStaticConstMacro(ImageDimension, unsigned int, TInputImage::ImageDimension);
+  itkStaticConstMacro(ImageDimension, unsigned int, TOutputImage::ImageDimension);
 
   /* Getters/Setters */
   /* Members */
   itkGetMacro(ExpandFactor, unsigned int);
   itkGetMacro(HighPassSubBands, unsigned int);
+  itkGetMacro(ScaleFactor, unsigned int);
+  itkSetMacro(ScaleFactor, unsigned int);
   void SetHighPassSubBands(unsigned int k);
   /* Set Inputs *****/
   void SetInputLowPass(InputImagePointer imgP);
@@ -110,8 +125,17 @@ protected:
   //     itk::ThreadIdType threadId) ITK_OVERRIDE;
   /************ Data Members *************/
 
+  /** Expand Factor, default is 2, dyadic dilation.
+   * @note this implementation is undecimated, so the output images have
+   * the same size than the input, independently of the ExpandFactor */
   unsigned int m_ExpandFactor;
+  /** Number of M-Bands decomposition of the high pass filters */
   unsigned int m_HighPassSubBands;
+  /** Scale Factor, defaults to 1, used optionally to dilate the filter bank in
+   * a multiresolution (multi-level) analysis. */
+  unsigned int m_ScaleFactor;
+  /** Size of the output in the first scale. */
+  typename OutputImageType::SizeType m_OutputSize;
 private:
   InverseWaveletFilterBankFFT(const Self &) ITK_DELETE_FUNCTION;
   void operator=(const Self&) ITK_DELETE_FUNCTION;

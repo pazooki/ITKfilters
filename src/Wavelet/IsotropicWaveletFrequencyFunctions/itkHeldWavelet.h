@@ -18,7 +18,7 @@
 #ifndef itkHeldWavelet_h
 #define itkHeldWavelet_h
 
-#include "itkWaveletFunction.h"
+#include "itkIsotropicWaveletFrequencyFunction.h"
 
 namespace itk
 {
@@ -43,12 +43,12 @@ template< typename TFunctionValue = double,
           unsigned int VImageDimension = 3,
           typename TInput = Point< SpacePrecisionType, VImageDimension > >
 class HeldWavelet:
-  public WaveletFunction< TFunctionValue, VImageDimension, TInput >
+  public IsotropicWaveletFrequencyFunction< TFunctionValue, VImageDimension, TInput >
 {
 public:
   /** Standard class typedefs. */
   typedef HeldWavelet                                        Self;
-  typedef WaveletFunction< TFunctionValue, VImageDimension, TInput > Superclass;
+  typedef IsotropicWaveletFrequencyFunction< TFunctionValue, VImageDimension, TInput > Superclass;
   typedef SmartPointer< Self >                                Pointer;
   typedef SmartPointer< const Self >                          ConstPointer;
 

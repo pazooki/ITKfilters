@@ -15,28 +15,27 @@
  *  limitations under the License.
  *
  *=========================================================================*/
-#ifndef itkWaveletFunction_hxx
-#define itkWaveletFunction_hxx
+#ifndef itkIsotropicWaveletFrequencyFunction_hxx
+#define itkIsotropicWaveletFrequencyFunction_hxx
 
-#include "itkWaveletFunction.h"
+#include "itkIsotropicWaveletFrequencyFunction.h"
 
 namespace itk
 {
 template< typename TFunctionValue, unsigned int VImageDimension, typename TInput >
-WaveletFunction< TFunctionValue, VImageDimension, TInput >
-::WaveletFunction()
-{
-  this->m_HighPassSubBands = 1;
-}
+IsotropicWaveletFrequencyFunction< TFunctionValue, VImageDimension, TInput >
+::IsotropicWaveletFrequencyFunction()
+  : m_HighPassSubBands(1)
+{}
 
 template< typename TFunctionValue, unsigned int VImageDimension, typename TInput >
-WaveletFunction< TFunctionValue, VImageDimension, TInput >
-::~WaveletFunction()
+IsotropicWaveletFrequencyFunction< TFunctionValue, VImageDimension, TInput >
+::~IsotropicWaveletFrequencyFunction()
 {}
 
 template< typename TFunctionValue, unsigned int VImageDimension, typename TInput >
 void
-WaveletFunction< TFunctionValue, VImageDimension, TInput >
+IsotropicWaveletFrequencyFunction< TFunctionValue, VImageDimension, TInput >
 ::PrintSelf(std::ostream & os, Indent indent) const
 {
   Superclass::PrintSelf(os, indent);

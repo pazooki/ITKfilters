@@ -21,19 +21,20 @@
 #include "itkNumericTraits.h"
 
 namespace itk {
-template <typename TInputImage, typename TOutputImage, typename TWaveletFunction>
-InverseWaveletFilterBankFFT<TInputImage, TOutputImage, TWaveletFunction>
-::InverseWaveletFilterBankFFT() {
-  this->m_ExpandFactor = 2;
-  this->m_HighPassSubBands = 0;
+template < typename TOutputImage, typename TWaveletFunction>
+InverseWaveletFilterBankFFT< TOutputImage, TWaveletFunction>
+::InverseWaveletFilterBankFFT()
+  : m_ExpandFactor(2),
+    m_HighPassSubBands(0),
+    m_ScaleFactor(1)
+{
   this->SetHighPassSubBands(1);
 }
 
-template <typename TInputImage, typename TOutputImage, typename TWaveletFunction>
-void InverseWaveletFilterBankFFT<TInputImage, TOutputImage, TWaveletFunction>
+template < typename TOutputImage, typename TWaveletFunction>
+void InverseWaveletFilterBankFFT< TOutputImage, TWaveletFunction>
 ::SetHighPassSubBands(unsigned int k) {
 
-  this->SetNumberOfRequiredOutputs(1);
   if ( m_HighPassSubBands == k )
     {
     return;
@@ -47,8 +48,8 @@ void InverseWaveletFilterBankFFT<TInputImage, TOutputImage, TWaveletFunction>
 
 }
 
-template <typename TInputImage, typename TOutputImage, typename TWaveletFunction>
-void InverseWaveletFilterBankFFT<TInputImage, TOutputImage, TWaveletFunction>
+template < typename TOutputImage, typename TWaveletFunction>
+void InverseWaveletFilterBankFFT< TOutputImage, TWaveletFunction>
 ::PrintSelf(std::ostream &os, Indent indent) const {
   Superclass::PrintSelf(os, indent);
 
@@ -57,28 +58,28 @@ void InverseWaveletFilterBankFFT<TInputImage, TOutputImage, TWaveletFunction>
 }
 
 /* ******* Set Input *****/
-template <typename TInputImage, typename TOutputImage, typename TWaveletFunction>
-void InverseWaveletFilterBankFFT<TInputImage, TOutputImage, TWaveletFunction>
+template < typename TOutputImage, typename TWaveletFunction>
+void InverseWaveletFilterBankFFT< TOutputImage, TWaveletFunction>
 ::SetInputLowPass(InputImagePointer imgP) {
   return this->SetNthInput(0, imgP);
 }
 
-template <typename TInputImage, typename TOutputImage, typename TWaveletFunction>
-void InverseWaveletFilterBankFFT<TInputImage, TOutputImage, TWaveletFunction>
+template < typename TOutputImage, typename TWaveletFunction>
+void InverseWaveletFilterBankFFT< TOutputImage, TWaveletFunction>
 ::SetInputHighPass(InputImagePointer imgP) {
   return this->SetNthInput(this->m_HighPassSubBands, imgP);
 }
 
-template <typename TInputImage, typename TOutputImage, typename TWaveletFunction>
-void InverseWaveletFilterBankFFT<TInputImage, TOutputImage, TWaveletFunction>
+template < typename TOutputImage, typename TWaveletFunction>
+void InverseWaveletFilterBankFFT< TOutputImage, TWaveletFunction>
 ::SetInputSubBand(unsigned int k, InputImagePointer imgP) {
   if (k==0) return this->SetInputLowPass(imgP);
   if (k==m_HighPassSubBands) return this->SetInputHighPass(imgP);
   return this->SetNthInput(k, imgP);
 }
 
-template <typename TInputImage, typename TOutputImage, typename TWaveletFunction>
-void InverseWaveletFilterBankFFT<TInputImage, TOutputImage, TWaveletFunction>
+template < typename TOutputImage, typename TWaveletFunction>
+void InverseWaveletFilterBankFFT< TOutputImage, TWaveletFunction>
 ::SetInputs(std::vector<InputImagePointer> inputList) {
   for (unsigned int ilevel = 0; ilevel < this->m_HighPassSubBands + 1; ++ilevel)
     {
@@ -86,8 +87,8 @@ void InverseWaveletFilterBankFFT<TInputImage, TOutputImage, TWaveletFunction>
     }
 }
 
-template <class TInputImage, class TOutputImage, class TWaveletFunction>
-void InverseWaveletFilterBankFFT<TInputImage, TOutputImage, TWaveletFunction>
+template <class TOutputImage, class TWaveletFunction>
+void InverseWaveletFilterBankFFT< TOutputImage, TWaveletFunction>
 ::GenerateData()
 // ::ThreadedGenerateData(
 //     const OutputImageRegionType& outputRegionForThread,

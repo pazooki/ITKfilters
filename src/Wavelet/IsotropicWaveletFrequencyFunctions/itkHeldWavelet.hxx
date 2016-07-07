@@ -27,10 +27,8 @@ namespace itk
 template< typename TFunctionValue, unsigned int VImageDimension, typename TInput >
 HeldWavelet< TFunctionValue, VImageDimension, TInput >
 ::HeldWavelet()
-{
-  this->m_PolynomialOrder = 3;
-  this->m_HighPassSubBands = 1;
-}
+ :m_PolynomialOrder(3)
+{}
 
 template< typename TFunctionValue, unsigned int VImageDimension, typename TInput >
 HeldWavelet< TFunctionValue, VImageDimension, TInput >
@@ -96,11 +94,13 @@ HeldWavelet< TFunctionValue, VImageDimension, TInput >
 template< typename TFunctionValue, unsigned int VImageDimension, typename TInput >
 typename HeldWavelet< TFunctionValue, VImageDimension, TInput >::FunctionValueType
 HeldWavelet< TFunctionValue, VImageDimension, TInput >
-::EvaluateForwardSubBand(const FunctionValueType & normPosition, unsigned int j) const
+::EvaluateForwardSubBand(const FunctionValueType & normPosition, unsigned int j)
+const
 {
   if (j == this->m_HighPassSubBands) return this->EvaluateForwardHighPassFilter(normPosition);
   if (j == 0) return this->EvaluateForwardLowPassFilter(normPosition);
-  if (j > this->m_HighPassSubBands || j < 0)  throw itk::ExceptionObject(__FILE__, __LINE__,
+  if (j > this->m_HighPassSubBands || j < 0)
+    throw itk::ExceptionObject(__FILE__, __LINE__,
             "Invalid SubBand", ITK_LOCATION);
   FunctionValueType value =
     std::pow(normPosition, this->m_HighPassSubBands) *

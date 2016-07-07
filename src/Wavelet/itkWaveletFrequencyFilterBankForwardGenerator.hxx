@@ -15,66 +15,66 @@
  *  limitations under the License.
  *
  *=========================================================================*/
-#ifndef itkForwardWaveletFilterBankFFT_hxx
-#define itkForwardWaveletFilterBankFFT_hxx
-#include "itkForwardWaveletFilterBankFFT.h"
+#ifndef itkWaveletFrequencyFilterBankForwardGenerator_hxx
+#define itkWaveletFrequencyFilterBankForwardGenerator_hxx
+#include "itkWaveletFrequencyFilterBankForwardGenerator.h"
 #include "itkNumericTraits.h"
 
 namespace itk {
-template <typename TInputImage, typename TOutputImage, typename TWaveletFunction>
-ForwardWaveletFilterBankFFT<TInputImage, TOutputImage, TWaveletFunction>
-::ForwardWaveletFilterBankFFT() {
-  this->m_ShrinkFactor = 2;
-  this->m_HighPassSubBands = 0;
-  this->m_ScaleFactor = 1;
+template < typename TOutputImage, typename TWaveletFunction>
+WaveletFrequencyFilterBankForwardGenerator< TOutputImage, TWaveletFunction>
+::WaveletFrequencyFilterBankForwardGenerator()
+  : m_HighPassSubBands(0),
+    m_ScaleFactor(1)
+{
   this->SetHighPassSubBands(1);
 }
 
-template <typename TInputImage, typename TOutputImage, typename TWaveletFunction>
-void ForwardWaveletFilterBankFFT<TInputImage, TOutputImage, TWaveletFunction>
+
+template < typename TOutputImage, typename TWaveletFunction>
+void WaveletFrequencyFilterBankForwardGenerator< TOutputImage, TWaveletFunction>
 ::SetHighPassSubBands(unsigned int k)
 {
-
-  this->SetNumberOfRequiredInputs(1);
   if ( m_HighPassSubBands == k ) return;
 
   this->m_HighPassSubBands = k;
   this->SetNumberOfRequiredOutputs(k + 1);
   this->Modified();
 
-  for (unsigned int ilevel = 0; ilevel < this->m_HighPassSubBands + 1; ++ilevel)
-    this->SetNthOutput(ilevel, this->MakeOutput(ilevel));
-
+  for (unsigned int band = 0; band < this->m_HighPassSubBands + 1; ++band)
+    this->SetNthOutput(band, this->MakeOutput(band));
 }
 
-template <typename TInputImage, typename TOutputImage, typename TWaveletFunction>
-void ForwardWaveletFilterBankFFT<TInputImage, TOutputImage, TWaveletFunction>
+template < typename TOutputImage, typename TWaveletFunction>
+void WaveletFrequencyFilterBankForwardGenerator< TOutputImage, TWaveletFunction>
 ::PrintSelf(std::ostream &os, Indent indent) const {
   Superclass::PrintSelf(os, indent);
 
-  os << indent << "ShrinkFactor : " << this->m_ShrinkFactor
-     << " ; HighPassSubBands : " << this->m_HighPassSubBands << std::endl;
+  os << indent << "HighPassSubBands: " << this->m_HighPassSubBands
+     << std::endl;
 }
 
 /* ******* Get Outputs *****/
-template <typename TInputImage, typename TOutputImage, typename TWaveletFunction>
-typename ForwardWaveletFilterBankFFT<TInputImage, TOutputImage, TWaveletFunction>
+template < typename TOutputImage, typename TWaveletFunction>
+typename WaveletFrequencyFilterBankForwardGenerator< TOutputImage, TWaveletFunction>
 ::OutputImagePointer
-ForwardWaveletFilterBankFFT<TInputImage, TOutputImage, TWaveletFunction>
+WaveletFrequencyFilterBankForwardGenerator< TOutputImage, TWaveletFunction>
 ::GetOutputLowPass() {
   return this->GetOutput(0);
 }
-template <typename TInputImage, typename TOutputImage, typename TWaveletFunction>
-typename ForwardWaveletFilterBankFFT<TInputImage, TOutputImage, TWaveletFunction>
+
+template < typename TOutputImage, typename TWaveletFunction>
+typename WaveletFrequencyFilterBankForwardGenerator< TOutputImage, TWaveletFunction>
 ::OutputImagePointer
-ForwardWaveletFilterBankFFT<TInputImage, TOutputImage, TWaveletFunction>
+WaveletFrequencyFilterBankForwardGenerator< TOutputImage, TWaveletFunction>
 ::GetOutputHighPass() {
   return this->GetOutput(this->m_HighPassSubBands);
 }
-template <typename TInputImage, typename TOutputImage, typename TWaveletFunction>
-typename ForwardWaveletFilterBankFFT<TInputImage, TOutputImage, TWaveletFunction>
+
+template < typename TOutputImage, typename TWaveletFunction>
+typename WaveletFrequencyFilterBankForwardGenerator< TOutputImage, TWaveletFunction>
 ::OutputImagePointer
-ForwardWaveletFilterBankFFT<TInputImage, TOutputImage, TWaveletFunction>
+WaveletFrequencyFilterBankForwardGenerator< TOutputImage, TWaveletFunction>
 ::GetOutputSubBand(unsigned int k) {
   if (k == 0)
     return this->GetOutputLowPass();
@@ -82,55 +82,64 @@ ForwardWaveletFilterBankFFT<TInputImage, TOutputImage, TWaveletFunction>
     return this->GetOutputHighPass();
   return this->GetOutput(k);
 }
-template <typename TInputImage, typename TOutputImage, typename TWaveletFunction>
-std::vector<typename ForwardWaveletFilterBankFFT<TInputImage, TOutputImage, TWaveletFunction>::OutputImagePointer>
-ForwardWaveletFilterBankFFT<TInputImage, TOutputImage, TWaveletFunction>
+
+template < typename TOutputImage, typename TWaveletFunction>
+std::vector<typename WaveletFrequencyFilterBankForwardGenerator< TOutputImage, TWaveletFunction>::OutputImagePointer>
+WaveletFrequencyFilterBankForwardGenerator< TOutputImage, TWaveletFunction>
 ::GetOutputs() {
   std::vector<OutputImagePointer> outputList;
-  for (unsigned int ilevel = 0; ilevel < this->m_HighPassSubBands + 1; ++ilevel)
+  for (unsigned int band = 0; band < this->m_HighPassSubBands + 1; ++band)
     {
-    outputList.push_back(this->GetOutputSubBand(ilevel));
+    outputList.push_back(this->GetOutputSubBand(band));
     }
   return outputList;
 }
 
-template <class TInputImage, class TOutputImage, class TWaveletFunction>
-void ForwardWaveletFilterBankFFT<TInputImage, TOutputImage, TWaveletFunction>
+template <class TOutputImage, class TWaveletFunction>
+void WaveletFrequencyFilterBankForwardGenerator< TOutputImage, TWaveletFunction>
 ::GenerateData()
 // ::ThreadedGenerateData(
 //     const OutputImageRegionType& outputRegionForThread,
 //     itk::ThreadIdType threadId)
 {
-  InputImageConstPointer input = this->GetInput();
 
   typename TWaveletFunction::Pointer evaluator = TWaveletFunction::New();
   evaluator->SetHighPassSubBands(this->m_HighPassSubBands);
 
-  typename OutputImageType::SizeType inputSize = input->GetLargestPossibleRegion().GetSize();
-  typename OutputImageType::PointType inputOrigin = input->GetOrigin();
-  typename OutputImageType::SpacingType inputSpacing = input->GetSpacing();
-  typename InputImageType::SizeType inputHalfSize;
-  typename InputImageType::SpacingType inputSpacingSquare = input->GetSpacing();
+  // Size,Origin and Spacing //
+  // Methods inherited from Superclass:GenerateImageSource
+  typename OutputImageType::SizeType inputSize = this->GetSize();
+  typename OutputImageType::PointType inputOrigin = this->GetOrigin();
+  typename OutputImageType::SpacingType inputSpacing = this->GetSpacing();
+  typename OutputImageType::SizeType inputHalfSize;
+  typename OutputImageType::SpacingType inputSpacingSquare = inputSpacing;
   for (unsigned int i = 0; i < ImageDimension; i++)
     {
     inputSpacingSquare[i] *= inputSpacingSquare[i];
     inputHalfSize[i] = inputSize[i] / 2;
     }
 
-  InputRegionConstIterator inputIt(input, input->GetRequestedRegion());
+  // Initialize Outputs
+  // InputRegionConstIterator inputIt(input, input->GetRequestedRegion());
   std::vector<OutputImagePointer> outputList;
   std::vector<OutputRegionIterator> outputItList;
-  for (unsigned int ilevel = 0; ilevel < this->m_HighPassSubBands + 1; ++ilevel)
+  for (unsigned int band = 0; band < this->m_HighPassSubBands + 1; ++band)
     {
-    outputList.push_back(this->GetOutput(ilevel));
-    InputImagePointer& outputPtr = outputList.back();
-    outputPtr->SetRegions(outputPtr->GetLargestPossibleRegion());
+    outputList.push_back(this->GetOutput(band));
+    OutputImagePointer& outputPtr = outputList.back();
+    // GenerateImageSource superclass allocates primary output, so use it.(???)
+    outputPtr->SetRegions(outputList[0]->GetLargestPossibleRegion());
     outputPtr->Allocate();
     outputPtr->FillBuffer(0);
     outputItList.push_back(OutputRegionIterator(outputPtr,outputPtr->GetRequestedRegion()));
     outputItList.back().GoToBegin();
     }
 
+  // Allocate fake input to iterate
+  OutputImagePointer fakeinput = OutputImageType::New();
+  fakeinput->SetRegions(outputList.back()->GetLargestPossibleRegion());
+  fakeinput->Allocate();
+  OutputRegionIterator inputIt(fakeinput, fakeinput->GetRequestedRegion());
   FunctionValueType w2 = 0.0;
   FunctionValueType w = 0.0;
   typename OutputImageType::IndexType index;
@@ -155,16 +164,16 @@ void ForwardWaveletFilterBankFFT<TInputImage, TOutputImage, TWaveletFunction>
 
     itkDebugMacro(<< "w_vector: " << w_vector << " w: " << w
                   << "  inputItIndex: " << inputIt.GetIndex()
-                  << " ;; l0:EvaluateLowPassFilter: "
-                  << evaluator->EvaluateForwardSubBand(w, 0)
-                  << " outputIndex: " << outputItList[0].GetIndex());
+                  << " ;; EvaluateHighPassFilter: "
+                  << evaluator->EvaluateForwardSubBand(w, m_HighPassSubBands)
+                  << " outputIndex: " << outputItList[m_HighPassSubBands].GetIndex());
     // l = 0 is low pass filter, l = m_HighPassSubBands is high-pass filter.
     for (unsigned int l = 0; l < m_HighPassSubBands + 1; ++l)
       {
       outputItList[l].Set(
         outputItList[l].Get() +
-        inputIt.Get() *
-          evaluator->EvaluateForwardSubBand(w * this->m_ScaleFactor, l));
+        evaluator->EvaluateForwardSubBand(w * this->m_ScaleFactor, l)
+        );
       ++outputItList[l];
       }
   }
