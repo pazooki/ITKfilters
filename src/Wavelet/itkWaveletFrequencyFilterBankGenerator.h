@@ -15,8 +15,8 @@
  *  limitations under the License.
  *
  *=========================================================================*/
-#ifndef itkWaveletFrequencyFilterBankForwardGenerator_h
-#define itkWaveletFrequencyFilterBankForwardGenerator_h
+#ifndef itkWaveletFrequencyFilterBankGenerator_h
+#define itkWaveletFrequencyFilterBankGenerator_h
 
 #include <itkImageConstIterator.h>
 #include <itkImageRegionIterator.h>
@@ -27,7 +27,7 @@
 namespace itk
 {
 
-/** \class WaveletFrequencyFilterBankForwardGenerator
+/** \class WaveletFrequencyFilterBankGenerator
  * \brief Generate filter bank of wavelet images.
  *
  * This implementation generates a low-pass / high-pass wavelet filter .
@@ -43,12 +43,12 @@ namespace itk
  * \ingroup ITKWavelet
  */
 template <class TOutputImage, class TWaveletFunction >
-class WaveletFrequencyFilterBankForwardGenerator
+class WaveletFrequencyFilterBankGenerator
 : public itk::GenerateImageSource< TOutputImage >
 {
 public:
   /** Standard typedefs */
-  typedef WaveletFrequencyFilterBankForwardGenerator            Self;
+  typedef WaveletFrequencyFilterBankGenerator            Self;
   typedef itk::GenerateImageSource<TOutputImage> Superclass;
   typedef itk::SmartPointer<Self>                Pointer;
   typedef itk::SmartPointer<const Self>          ConstPointer;
@@ -57,7 +57,7 @@ public:
   itkNewMacro(Self);
 
   /** Creation through object factory macro */
-  itkTypeMacro(WaveletFrequencyFilterBankForwardGenerator, GenerateImageSourceFilter);
+  itkTypeMacro(WaveletFrequencyFilterBankGenerator, GenerateImageSourceFilter);
 
   /** Inherit types from Superclass. */
   typedef typename Superclass::OutputImageType        OutputImageType;
@@ -78,14 +78,16 @@ public:
   void SetHighPassSubBands(unsigned int k);
   itkGetMacro(ScaleFactor, unsigned int);
   itkSetMacro(ScaleFactor, unsigned int);
+  itkGetMacro(InverseBank, bool);
+  itkSetMacro(InverseBank, bool);
   /** Get Outputs *****/
   OutputImagePointer GetOutputLowPass();
   OutputImagePointer GetOutputHighPass();
   OutputImagePointer GetOutputSubBand(unsigned int k);
   std::vector<OutputImagePointer> GetOutputs();
 protected:
-  WaveletFrequencyFilterBankForwardGenerator();
-  virtual ~WaveletFrequencyFilterBankForwardGenerator() {}
+  WaveletFrequencyFilterBankGenerator();
+  virtual ~WaveletFrequencyFilterBankGenerator() {}
   void PrintSelf(std::ostream & os, Indent indent) const ITK_OVERRIDE;
 
   /************ GenerateData *************/
@@ -112,14 +114,17 @@ protected:
   /** Scale Factor, defaults to 1, used optionally to dilate the filter bank in
    * a multiresolution (multi-level) analysis. */
   unsigned int m_ScaleFactor;
+  /** Flag to call generate inverse(reconstruction) filter bank instead
+   * of forward (analysis) */
+  bool m_InverseBank;
 private:
-  WaveletFrequencyFilterBankForwardGenerator(const Self &) ITK_DELETE_FUNCTION;
+  WaveletFrequencyFilterBankGenerator(const Self &) ITK_DELETE_FUNCTION;
   void operator=(const Self&) ITK_DELETE_FUNCTION;
 
 }; // end of class
 } // end namespace itk
 #ifndef ITK_MANUAL_INSTANTIATION
-#include "itkWaveletFrequencyFilterBankForwardGenerator.hxx"
+#include "itkWaveletFrequencyFilterBankGenerator.hxx"
 #endif
 
 #endif

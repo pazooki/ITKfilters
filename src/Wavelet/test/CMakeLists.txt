@@ -10,23 +10,14 @@ include(${VTK_USE_FILE})
 find_package(Qt5 COMPONENTS Widgets)
 
 # testsWaveletFilterBank
-# Forward
-add_executable(testWaveletFrequencyFilterBankForwardGenerator.exe testWaveletFrequencyFilterBankForwardGenerator.cpp)
-set_source_files_properties (testWaveletFrequencyFilterBankForwardGenerator.exe PROPERTIES COMPILE_FLAGS "-Wno-sign-compare")
-target_link_libraries(testWaveletFrequencyFilterBankForwardGenerator.exe gtest_main ${CMAKE_THREAD_LIBS_INIT})
-target_link_libraries(testWaveletFrequencyFilterBankForwardGenerator.exe ${ITK_LIBRARIES})
-target_link_libraries(testWaveletFrequencyFilterBankForwardGenerator.exe ${Boost_PROGRAM_OPTIONS_LIBRARY})
-target_link_libraries(testWaveletFrequencyFilterBankForwardGenerator.exe ${VTK_LIBRARIES})
-target_link_libraries(testWaveletFrequencyFilterBankForwardGenerator.exe Qt5::Widgets)
-
-# Inverse
-add_executable(testWaveletFrequencyFilterBankInverseGenerator.exe testWaveletFrequencyFilterBankInverseGenerator.cpp)
-set_source_files_properties (testWaveletFrequencyFilterBankInverseGenerator.exe PROPERTIES COMPILE_FLAGS "-Wno-sign-compare")
-target_link_libraries(testWaveletFrequencyFilterBankInverseGenerator.exe gtest_main ${CMAKE_THREAD_LIBS_INIT})
-target_link_libraries(testWaveletFrequencyFilterBankInverseGenerator.exe ${ITK_LIBRARIES})
-target_link_libraries(testWaveletFrequencyFilterBankInverseGenerator.exe ${Boost_PROGRAM_OPTIONS_LIBRARY})
-target_link_libraries(testWaveletFrequencyFilterBankInverseGenerator.exe ${VTK_LIBRARIES})
-target_link_libraries(testWaveletFrequencyFilterBankInverseGenerator.exe Qt5::Widgets)
+# General
+add_executable(testWaveletFrequencyFilterBankGenerator.exe testWaveletFrequencyFilterBankGenerator.cpp)
+set_source_files_properties (testWaveletFrequencyFilterBankGenerator.exe PROPERTIES COMPILE_FLAGS "-Wno-sign-compare")
+target_link_libraries(testWaveletFrequencyFilterBankGenerator.exe gtest_main ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries(testWaveletFrequencyFilterBankGenerator.exe ${ITK_LIBRARIES})
+target_link_libraries(testWaveletFrequencyFilterBankGenerator.exe ${Boost_PROGRAM_OPTIONS_LIBRARY})
+target_link_libraries(testWaveletFrequencyFilterBankGenerator.exe ${VTK_LIBRARIES})
+target_link_libraries(testWaveletFrequencyFilterBankGenerator.exe Qt5::Widgets)
 
 ##############
 
