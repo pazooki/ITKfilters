@@ -31,6 +31,12 @@ WaveletFrequencyFilterBankGenerator< TOutputImage, TWaveletFunction>
   this->SetHighPassSubBands(1);
 }
 
+template < typename TOutputImage, typename TWaveletFunction>
+void WaveletFrequencyFilterBankGenerator< TOutputImage, TWaveletFunction>
+::SetInverseBankOn()
+{
+  this->SetInverseBank(true);
+}
 
 template < typename TOutputImage, typename TWaveletFunction>
 void WaveletFrequencyFilterBankGenerator< TOutputImage, TWaveletFunction>
@@ -52,6 +58,7 @@ void WaveletFrequencyFilterBankGenerator< TOutputImage, TWaveletFunction>
   Superclass::PrintSelf(os, indent);
 
   os << indent << "HighPassSubBands: " << this->m_HighPassSubBands
+     << indent << "InverseBank: " << (this->m_InverseBank ? "true":"false")
      << std::endl;
 }
 
@@ -60,7 +67,8 @@ template < typename TOutputImage, typename TWaveletFunction>
 typename WaveletFrequencyFilterBankGenerator< TOutputImage, TWaveletFunction>
 ::OutputImagePointer
 WaveletFrequencyFilterBankGenerator< TOutputImage, TWaveletFunction>
-::GetOutputLowPass() {
+::GetOutputLowPass()
+{
   return this->GetOutput(0);
 }
 
@@ -68,7 +76,8 @@ template < typename TOutputImage, typename TWaveletFunction>
 typename WaveletFrequencyFilterBankGenerator< TOutputImage, TWaveletFunction>
 ::OutputImagePointer
 WaveletFrequencyFilterBankGenerator< TOutputImage, TWaveletFunction>
-::GetOutputHighPass() {
+::GetOutputHighPass()
+{
   return this->GetOutput(this->m_HighPassSubBands);
 }
 
@@ -76,7 +85,8 @@ template < typename TOutputImage, typename TWaveletFunction>
 typename WaveletFrequencyFilterBankGenerator< TOutputImage, TWaveletFunction>
 ::OutputImagePointer
 WaveletFrequencyFilterBankGenerator< TOutputImage, TWaveletFunction>
-::GetOutputSubBand(unsigned int k) {
+::GetOutputSubBand(unsigned int k)
+{
   if (k == 0)
     return this->GetOutputLowPass();
   if (k == m_HighPassSubBands)
@@ -87,13 +97,28 @@ WaveletFrequencyFilterBankGenerator< TOutputImage, TWaveletFunction>
 template < typename TOutputImage, typename TWaveletFunction>
 std::vector<typename WaveletFrequencyFilterBankGenerator< TOutputImage, TWaveletFunction>::OutputImagePointer>
 WaveletFrequencyFilterBankGenerator< TOutputImage, TWaveletFunction>
-::GetOutputs() {
+::GetOutputsAll()
+{
   std::vector<OutputImagePointer> outputList;
   for (unsigned int band = 0; band < this->m_HighPassSubBands + 1; ++band)
     {
     outputList.push_back(this->GetOutputSubBand(band));
     }
   return outputList;
+}
+
+template < typename TOutputImage, typename TWaveletFunction>
+std::vector<typename WaveletFrequencyFilterBankGenerator< TOutputImage, TWaveletFunction>::OutputImagePointer>
+WaveletFrequencyFilterBankGenerator< TOutputImage, TWaveletFunction>
+::GetOutputsHighPassBands()
+{
+  std::vector<OutputImagePointer> outputList;
+  for (unsigned int band = 1; band < this->m_HighPassSubBands + 1; ++band)
+    {
+    outputList.push_back(this->GetOutputSubBand(band));
+    }
+  return outputList;
+
 }
 
 template <class TOutputImage, class TWaveletFunction>
@@ -174,10 +199,10 @@ void WaveletFrequencyFilterBankGenerator< TOutputImage, TWaveletFunction>
         outputItList[l].Get() + evaluatedSubBand);
       ++outputItList[l];
       }
-    itkDebugMacro(<< "w_vector: " << w_vector << " w: " << w
+    itkDebugMacro(<< "w_vector: " << w_vector
+                  << " w: " << w
                   << "  inputItIndex: " << inputIt.GetIndex()
-                  << " ;; Evaluate highest subband: "
-                  << evaluatedSubBand
+                  << " ; Evaluate highest subband: " << evaluatedSubBand
                   << " outputIndex: " << outputItList[m_HighPassSubBands].GetIndex());
   }
 }

@@ -18,11 +18,13 @@
 #ifndef itkForwardWaveletFFT_h
 #define itkForwardWaveletFFT_h
 
-#include <itkForwardWaveletFilterBankFFT.h>
 #include "itkImageRegionConstIterator.h"
+#include "itkImageRegionIterator.h"
 #include <itkImageConstIterator.h>
 #include <complex>
 #include <itkFixedArray.h>
+#include <itkImageToImageFilter.h>
+// #include "itkWaveletFrequencyFilterBankGenerator.h"
 
 namespace itk
 {
@@ -57,7 +59,6 @@ public:
   typedef TWaveletFilterBank                                  WaveletFilterBankType;
   typedef typename WaveletFilterBankType::WaveletFunctionType WaveletFunctionType;
   typedef typename WaveletFilterBankType::FunctionValueType   FunctionValueType;
-  typedef itk::ForwardWaveletFilterBankFFT<OutputImageType, OutputImageType, WaveletFunctionType> OutputWaveletFilterBankType;
 
   /** ImageDimension constants */
   itkStaticConstMacro(ImageDimension, unsigned int,
@@ -74,6 +75,15 @@ public:
   void SetHighPassSubBands(unsigned int n);
   itkGetMacro(HighPassSubBands, unsigned int);
 
+  /** Compute max number of levels depending on the size of the image.
+   * Return J: $ J = min_element(J_0,J_1,...) $ ;
+   * where $ 2^J_0 = input_size[0], 2^J_1 = input_size[1] ...  $
+   * When the max level is equal to 1 (J=1) implies that there isn't multidimensional analysis.
+   * If the size on any dimension is not a power of 2, the max level will be 1.
+   * If the sizes are different, but all of them are power of 2, the max level will be the minimum $J_i$.
+   */
+  unsigned int ComputeMaxNumberOfLevels(typename InputImageType::SizeType& input_size);
+
 protected:
   ForwardWaveletFFT();
   ~ForwardWaveletFFT() {}
@@ -84,7 +94,6 @@ protected:
   unsigned int m_Levels;
   unsigned int m_HighPassSubBands;
   unsigned int m_TotalOutputs;
-  typename WaveletFilterBankType::Pointer m_FilterBank;
 private:
   ForwardWaveletFFT(const Self &) ITK_DELETE_FUNCTION;
   void operator=(const Self &) ITK_DELETE_FUNCTION;

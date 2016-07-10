@@ -10,6 +10,8 @@ po::variables_map program_options(const int &argc, char** const & argv){
   generic.add_options()
       ("visualize,v", po::bool_switch()->default_value(false), "Visualize output")
       ("debug,d", po::bool_switch()->default_value(false), "Debug Flag")
+      ("input_n,n", po::value<int>()->default_value(1), "integer for whatever use. ie, high_pass_subbands")
+      ("input_l,l", po::value<int>()->default_value(1), "integer for whatever use. ie. levels")
       ;
 
   po::options_description cmdline_options;
