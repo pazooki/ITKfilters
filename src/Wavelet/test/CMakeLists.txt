@@ -22,13 +22,13 @@ target_link_libraries(testWaveletFrequencyFilterBankGenerator.exe Qt5::Widgets)
 ##############
 
 # testWavelet
-add_executable(testWaveletFFT.exe testWaveletFFT.cpp)
-set_source_files_properties (testWaveletFFT.exe PROPERTIES COMPILE_FLAGS "-Wno-sign-compare")
-target_link_libraries(testWaveletFFT.exe gtest_main ${CMAKE_THREAD_LIBS_INIT})
-target_link_libraries(testWaveletFFT.exe ${ITK_LIBRARIES})
-target_link_libraries(testWaveletFFT.exe ${Boost_PROGRAM_OPTIONS_LIBRARY})
-target_link_libraries(testWaveletFFT.exe ${VTK_LIBRARIES})
-target_link_libraries(testWaveletFFT.exe Qt5::Widgets)
+add_executable(testWaveletFrequency.exe testWaveletFrequency.cpp)
+set_source_files_properties (testWaveletFrequency.exe PROPERTIES COMPILE_FLAGS "-Wno-sign-compare")
+target_link_libraries(testWaveletFrequency.exe gtest_main ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries(testWaveletFrequency.exe ${ITK_LIBRARIES})
+target_link_libraries(testWaveletFrequency.exe ${Boost_PROGRAM_OPTIONS_LIBRARY})
+target_link_libraries(testWaveletFrequency.exe ${VTK_LIBRARIES})
+target_link_libraries(testWaveletFrequency.exe Qt5::Widgets)
 
 # add_custom_command(
 #     TARGET test_quadrature.exe PRE_BUILD

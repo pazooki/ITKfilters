@@ -15,8 +15,8 @@
  *  limitations under the License.
  *
  *=========================================================================*/
-#ifndef itkForwardWaveletFFT_h
-#define itkForwardWaveletFFT_h
+#ifndef itkWaveletFrequencyForward_h
+#define itkWaveletFrequencyForward_h
 
 #include "itkImageRegionConstIterator.h"
 #include "itkImageRegionIterator.h"
@@ -28,19 +28,19 @@
 
 namespace itk
 {
-/** \class ForwardWaveletFFT
+/** \class WaveletFrequencyForward
  * @brief Wavelet analysis where input is an FFT image.
  * Aim to be Isotropic.
  *
  * \ingroup ITKWavelet
  */
 template< class TInputImage, class TOutputImage, class TWaveletFilterBank >
-class ForwardWaveletFFT:
+class WaveletFrequencyForward:
   public ImageToImageFilter< TInputImage, TOutputImage>
 {
 public:
   /** Standard classs typedefs. */
-  typedef ForwardWaveletFFT                               Self;
+  typedef WaveletFrequencyForward                               Self;
   typedef ImageToImageFilter< TInputImage, TOutputImage > Superclass;
   typedef SmartPointer< Self >                            Pointer;
   typedef SmartPointer< const Self >                      ConstPointer;
@@ -68,7 +68,7 @@ public:
   itkNewMacro(Self);
 
   /** Runtime information support. */
-  itkTypeMacro(ForwardWaveletFFT,
+  itkTypeMacro(WaveletFrequencyForward,
                ImageToImageFilter);
   void SetLevels(unsigned int n);
   itkGetMacro(Levels, unsigned int);
@@ -84,23 +84,59 @@ public:
    */
   unsigned int ComputeMaxNumberOfLevels(typename InputImageType::SizeType& input_size);
 
+  typedef std::pair<unsigned int, unsigned int> IndexPairType;
+  /** Get the (Level,Band) from a linear index output, knowing the following relation:
+   * TotalOutputs = 1 + Levels * Bands
+   * min(Levels) = 1, min(Bands) = 0 (low pass)*/
+  IndexPairType OutputIndexToLevelBand(unsigned int linear_index);
+
+
 protected:
-  ForwardWaveletFFT();
-  ~ForwardWaveletFFT() {}
+  WaveletFrequencyForward();
+  ~WaveletFrequencyForward() {}
   void PrintSelf(std::ostream & os, Indent indent) const ITK_OVERRIDE;
   /** Single-threaded version of GenerateData. */
   void GenerateData() ITK_OVERRIDE;
+   /************ Information *************/
 
+   /** WaveletFrequencyForward produces images which are of
+    * different resolution and different pixel spacing than its input image.
+    * As such, WaveletFrequencyForward needs to provide an
+    * implementation for GenerateOutputInformation() in order to inform the
+    * pipeline execution model.  The original documentation of this method is
+    * below.
+    * \sa ProcessObject::GenerateOutputInformaton()
+    */
+   virtual void GenerateOutputInformation() ITK_OVERRIDE;
+
+   /** Given one output whose requested region has been set, this method sets
+    * the requested region for the remaining output images.  The original
+    * documentation of this method is below.
+    * \sa ProcessObject::GenerateOutputRequestedRegion()
+    */
+   virtual void GenerateOutputRequestedRegion(DataObject *output) ITK_OVERRIDE;
+
+   /** WaveletFrequencyForward requires a larger input requested
+    * region than the output requested regions to accommodate the shrinkage and
+    * smoothing operations. As such, WaveletFrequencyForward needs
+    * to provide an implementation for GenerateInputRequestedRegion().  The
+    * original documentation of this method is below.
+    * \sa ProcessObject::GenerateInputRequestedRegion()
+    */
+   virtual void GenerateInputRequestedRegion() ITK_OVERRIDE;
+private:
+  WaveletFrequencyForward(const Self &) ITK_DELETE_FUNCTION;
+  void operator=(const Self &) ITK_DELETE_FUNCTION;
   unsigned int m_Levels;
   unsigned int m_HighPassSubBands;
   unsigned int m_TotalOutputs;
-private:
-  ForwardWaveletFFT(const Self &) ITK_DELETE_FUNCTION;
-  void operator=(const Self &) ITK_DELETE_FUNCTION;
+  /** Shrink/Expand factor
+   * Set to 2, not modifiable, but provides future flexibility */
+  unsigned int m_ScaleFactor;
 };
 } // end namespace itk
 #ifndef ITK_MANUAL_INSTANTIATION
-#include "itkForwardWaveletFFT.hxx"
+#include "itkWaveletFrequencyForward.hxx"
 #endif
 
 #endif
