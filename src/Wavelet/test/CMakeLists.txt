@@ -22,6 +22,7 @@ target_link_libraries(testWaveletFrequencyFilterBankGenerator.exe Qt5::Widgets)
 ##############
 
 # testWavelet
+# Forward
 add_executable(testWaveletFrequency.exe testWaveletFrequency.cpp)
 set_source_files_properties (testWaveletFrequency.exe PROPERTIES COMPILE_FLAGS "-Wno-sign-compare")
 target_link_libraries(testWaveletFrequency.exe gtest_main ${CMAKE_THREAD_LIBS_INIT})
@@ -30,6 +31,14 @@ target_link_libraries(testWaveletFrequency.exe ${Boost_PROGRAM_OPTIONS_LIBRARY})
 target_link_libraries(testWaveletFrequency.exe ${VTK_LIBRARIES})
 target_link_libraries(testWaveletFrequency.exe Qt5::Widgets)
 
+# Inverse
+add_executable(testWaveletFrequencyInverse.exe testWaveletFrequencyInverse.cpp)
+set_source_files_properties (testWaveletFrequencyInverse.exe PROPERTIES COMPILE_FLAGS "-Wno-sign-compare")
+target_link_libraries(testWaveletFrequencyInverse.exe gtest_main ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries(testWaveletFrequencyInverse.exe ${ITK_LIBRARIES})
+target_link_libraries(testWaveletFrequencyInverse.exe ${Boost_PROGRAM_OPTIONS_LIBRARY})
+target_link_libraries(testWaveletFrequencyInverse.exe ${VTK_LIBRARIES})
+target_link_libraries(testWaveletFrequencyInverse.exe Qt5::Widgets)
 # add_custom_command(
 #     TARGET test_quadrature.exe PRE_BUILD
 #     COMMAND mkdir -p ${EXECUTABLE_OUTPUT_PATH}/testQuadrature
