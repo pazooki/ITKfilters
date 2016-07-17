@@ -23,8 +23,7 @@
 #include <algorithm>
 #include <itkMultiplyImageFilter.h>
 #include <itkBinShrinkImageFilter.h>
-#include <itkChangeInformationImageFilter.h> // override shrink override of info.
-// #include <itkExpandImageFilter.h>
+#include <itkChangeInformationImageFilter.h>
 namespace itk
 {
 template <typename TInputImage, typename TOutputImage, typename TWaveletFilterBank>
@@ -58,6 +57,59 @@ WaveletFrequencyForward<TInputImage, TOutputImage, TWaveletFilterBank>
 };
 
 template <typename TInputImage, typename TOutputImage, typename TWaveletFilterBank>
+std::vector< typename WaveletFrequencyForward<TInputImage, TOutputImage, TWaveletFilterBank>::OutputImagePointer>
+WaveletFrequencyForward<TInputImage, TOutputImage, TWaveletFilterBank>
+::GetOutputs()
+{
+  std::vector<OutputImagePointer> outputPtrs;
+  for( unsigned int nout = 0 ; nout < this->m_TotalOutputs ; ++nout)
+    {
+    outputPtrs.push_back(this->GetOutput(nout));
+    }
+  return outputPtrs;
+}
+
+template <typename TInputImage, typename TOutputImage, typename TWaveletFilterBank>
+std::vector< typename WaveletFrequencyForward<TInputImage, TOutputImage, TWaveletFilterBank>::OutputImagePointer>
+WaveletFrequencyForward<TInputImage, TOutputImage, TWaveletFilterBank>
+::GetOutputsHighPass()
+{
+  std::vector<OutputImagePointer> outputPtrs;
+  for( unsigned int nout = 1 ; nout < this->m_TotalOutputs ; ++nout)
+    {
+    outputPtrs.push_back(this->GetOutput(nout));
+    }
+  return outputPtrs;
+}
+
+template <typename TInputImage, typename TOutputImage, typename TWaveletFilterBank>
+typename WaveletFrequencyForward<TInputImage, TOutputImage, TWaveletFilterBank>::OutputImagePointer
+WaveletFrequencyForward<TInputImage, TOutputImage, TWaveletFilterBank>
+::GetOutputLowPass()
+{
+  return this->GetOutput(0);
+
+}
+
+template <typename TInputImage, typename TOutputImage, typename TWaveletFilterBank>
+std::vector< typename WaveletFrequencyForward<TInputImage, TOutputImage, TWaveletFilterBank>::OutputImagePointer>
+WaveletFrequencyForward<TInputImage, TOutputImage, TWaveletFilterBank>
+::GetOutputsHighPassByLevel(unsigned int level)
+{
+  std::vector<OutputImagePointer> outputPtrs;
+  unsigned int nout_start = 1 + level * this->m_HighPassSubBands ;
+  unsigned int nout_end = 1 + (level + 1) * this->m_HighPassSubBands;
+  if (nout_end > this->m_TotalOutputs)
+    nout_end = this->m_TotalOutputs;
+
+  for( unsigned int nout = nout_start ; nout < nout_end ; ++nout)
+    {
+    outputPtrs.push_back(this->GetOutput(nout));
+    }
+  return outputPtrs;
+}
+
+template <typename TInputImage, typename TOutputImage, typename TWaveletFilterBank>
 unsigned int WaveletFrequencyForward<TInputImage, TOutputImage, TWaveletFilterBank>
 ::ComputeMaxNumberOfLevels(typename InputImageType::SizeType& input_size)
 {
@@ -73,15 +125,13 @@ unsigned int WaveletFrequencyForward<TInputImage, TOutputImage, TWaveletFilterBa
     double exponent = std::log(size_axis) / std::log(2.0) ;
     // check that exponent is integer: the fractional part is 0
     double int_part;
-    if (std::modf(exponent, &int_part ) == 0.0 )
+    if (std::modf(exponent, &int_part ) == 0 )
       {
       exponent_per_axis[axis] = static_cast<unsigned int>(exponent);
-      continue;
       }
     else
       {
       exponent_per_axis[axis] = 1;
-      continue;
       }
     }
   // return the min_element of array (1 if any size is not power of 2)
@@ -192,16 +242,9 @@ template <typename TInputImage, typename TOutputImage, typename TWaveletFilterBa
         outputStartIndex[idim] = static_cast<IndexValueType>(
           std::ceil(static_cast<double>(inputStartIndex[idim]) / scaleFactorPerLevel));
         // Spacing
-        // outputSpacing[idim] = inputSpacing[idim] * scaleFactorPerLevel;
         outputSpacing[idim] = inputSpacing[idim] ;
         // Origin.
-        // outputOrigin[idim] = inputOrigin[idim] / scaleFactorPerLevel;
         outputOrigin[idim] = inputOrigin[idim];
-        // if (ilevel == low_pass)
-        //   outputOrigin[idim] = inputOrigin[idim];
-        // else
-        //   outputOrigin[idim] = inputOrigin[idim] +
-        //     outputSpacing[idim] * outputSize[idim] / static_cast<double>(this->m_ScaleFactor);
         }
 
       // Set to the output
@@ -251,11 +294,9 @@ template <typename TInputImage, typename TOutputImage, typename TWaveletFilterBa
   TOutputImage *ptr = itkDynamicCastInDebugMode<TOutputImage *>(refOutput);
   if (!ptr) itkExceptionMacro(<< "Could not cast refOutput to TOutputImage*.");
 
-  unsigned int idim;
-
-  if (ptr->GetRequestedRegion() == ptr->GetLargestPossibleRegion()) {
-    // set the requested regions for the other outputs to their
-    // requested region
+  if (ptr->GetRequestedRegion() == ptr->GetLargestPossibleRegion())
+    {
+    // set the requested regions for the other outputs to their largest
 
     for (unsigned int nout = 0; nout < this->m_TotalOutputs; ++nout)
       {
@@ -263,7 +304,8 @@ template <typename TInputImage, typename TOutputImage, typename TWaveletFilterBa
       if (!this->GetOutput(nout)) continue;
       this->GetOutput(nout)->SetRequestedRegionToLargestPossibleRegion();
       }
-  } else
+    }
+  else
     {
     // compute requested regions for the other outputs based on
     // the requested region of the reference output
@@ -273,7 +315,7 @@ template <typename TInputImage, typename TOutputImage, typename TWaveletFilterBa
     IndexType baseIndex = ptr->GetRequestedRegion().GetIndex();
     SizeType baseSize = ptr->GetRequestedRegion().GetSize();
 
-    for (idim = 0; idim < TOutputImage::ImageDimension; idim++)
+    for (unsigned int idim = 0; idim < TOutputImage::ImageDimension; idim++)
       {
       baseIndex[idim] *= static_cast<IndexValueType>(std::pow(this->m_ScaleFactor, refLevel - 1));
       baseSize[idim] *= static_cast<SizeValueType>(std::pow(this->m_ScaleFactor, refLevel - 1));
@@ -289,7 +331,7 @@ template <typename TInputImage, typename TOutputImage, typename TWaveletFilterBa
         if (n_output == refIndex) continue;
         if (!this->GetOutput(n_output)) continue;
 
-        for (idim = 0; idim < TOutputImage::ImageDimension; idim++)
+        for (unsigned int idim = 0; idim < TOutputImage::ImageDimension; idim++)
           {
           // Index by half.
           outputIndex[idim] = static_cast<IndexValueType>(

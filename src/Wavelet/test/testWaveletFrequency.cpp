@@ -54,6 +54,30 @@ int main(int argc, char** argv){
     forwardWavelet->Print(std::cout);
     forwardWavelet->Update();
 
+
+    unsigned int ne = 0;
+    // TEST INTERFACE:
+    auto all_outputs = forwardWavelet->GetOutputs();
+   if( all_outputs.size() != forwardWavelet->GetTotalOutputs() )
+       {
+       std::cout << "Error all_outputs" << '\n';
+       ++ne;
+       }
+
+    auto low_pass = forwardWavelet->GetOutputLowPass();
+    auto all_high_sub_bands = forwardWavelet->GetOutputsHighPass();
+   if( all_high_sub_bands.size() != forwardWavelet->GetTotalOutputs()  - 1)
+       {
+       std::cout << "Error all_high_sub_bands" << '\n';
+       ++ne;
+       }
+    auto high_sub_bands_per_level = forwardWavelet->GetOutputsHighPassByLevel(0);
+   if( high_sub_bands_per_level.size() != forwardWavelet->GetHighPassSubBands())
+       {
+       std::cout << "Error high_sub_bands_per_level" << '\n';
+       ++ne;
+       }
+
     for (unsigned int nout = 0 ; nout < forwardWavelet->GetNumberOfOutputs() ; ++nout)
     {
       unsigned int lv, b;
@@ -62,7 +86,6 @@ int main(int argc, char** argv){
     }
 
     /* test OutputIndexToLevelBand */
-    unsigned int ne = 0;
     {
       unsigned int lv, b;
       std::tie(lv,b) = forwardWavelet->OutputIndexToLevelBand(0);

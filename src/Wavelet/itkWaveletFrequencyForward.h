@@ -74,6 +74,7 @@ public:
   itkGetMacro(Levels, unsigned int);
   void SetHighPassSubBands(unsigned int n);
   itkGetMacro(HighPassSubBands, unsigned int);
+  itkGetMacro(TotalOutputs, unsigned int);
 
   /** Compute max number of levels depending on the size of the image.
    * Return J: $ J = min_element(J_0,J_1,...) $ ;
@@ -85,11 +86,14 @@ public:
   unsigned int ComputeMaxNumberOfLevels(typename InputImageType::SizeType& input_size);
 
   typedef std::pair<unsigned int, unsigned int> IndexPairType;
-  /** Get the (Level,Band) from a linear index output, knowing the following relation:
-   * TotalOutputs = 1 + Levels * Bands
-   * min(Levels) = 1, min(Bands) = 0 (low pass)*/
+  /** Get the (Level,Band) from a linear index output */
   IndexPairType OutputIndexToLevelBand(unsigned int linear_index);
 
+  /** Retrieve outputs */
+  std::vector<OutputImagePointer> GetOutputs();
+  std::vector<OutputImagePointer> GetOutputsHighPass();
+  OutputImagePointer GetOutputLowPass();
+  std::vector<OutputImagePointer> GetOutputsHighPassByLevel(unsigned int level);
 
 protected:
   WaveletFrequencyForward();
