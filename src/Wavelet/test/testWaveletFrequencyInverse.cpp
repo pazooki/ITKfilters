@@ -25,7 +25,7 @@ int main(int argc, char** argv){
     bool DEBUG = option_map["debug"].as<bool>();
     unsigned int input_n = option_map["input_n"].as<int>();
     unsigned int input_l = option_map["input_l"].as<int>();
-    const string img_file{"/home/phc/repository_local/ITKfilters/src/fixtures/collagen_98x98x20.tiff"};
+    const string img_file{"/home/phc/repository_local/ITKfilters/src/fixtures/collagen_64x64x16.tiff"};
     const unsigned int dimension = 3;
     using PixelType = double;
     using ImageType = itk::Image<PixelType, dimension>;
@@ -52,6 +52,13 @@ int main(int argc, char** argv){
     forwardWavelet->SetLevels(levels);
     forwardWavelet->SetInput(fftFilter->GetOutput());
     forwardWavelet->Update();
+    auto noutputs = forwardWavelet->GetNumberOfOutputs();
+    std::cout << "Ninputs: " << noutputs << '\n';
+    for (unsigned int i = 0; i < noutputs; ++i)
+    {
+        std::cout << " Size of input: " << i << '\n';
+        std::cout << forwardWavelet->GetOutput(i)->GetLargestPossibleRegion() << '\n' ;
+    }
 
     // Inverse Wavelet Transform
     typedef itk::WaveletFrequencyInverse<ComplexImageType, ComplexImageType, WaveletFilterBankType> InverseWaveletType;
@@ -69,6 +76,7 @@ int main(int argc, char** argv){
     inverseFFT->SetInput(inverseWavelet->GetOutput());
     inverseFFT->Update();
     // Compare these two in itk_test
+    // if(VFLAG) visualize::VisualizeITKImages(reader->GetOutput(), inverseFFT->GetOutput());
     if(VFLAG) visualize::VisualizeITKImage(inverseFFT->GetOutput());
     if(VFLAG) visualize::VisualizeITKImage(reader->GetOutput());
 }

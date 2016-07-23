@@ -23,6 +23,8 @@
 #include <algorithm>
 #include <itkMultiplyImageFilter.h>
 #include <itkBinShrinkImageFilter.h>
+#include <itkShrinkImageFilter.h>
+// #include <itkFrequencyShrinkImageFilter.h>
 #include <itkChangeInformationImageFilter.h>
 namespace itk
 {
@@ -53,6 +55,7 @@ WaveletFrequencyForward<TInputImage, TOutputImage, TWaveletFilterBank>
   band = band + 1;
   // note integer division ahead.
   unsigned int level  = (linear_index - band) / this->m_HighPassSubBands + 1;
+  assert(level > 0);
   return std::make_pair(level, band);
 };
 
@@ -198,77 +201,81 @@ template <typename TInputImage, typename TOutputImage, typename TWaveletFilterBa
   if (!inputPtr)
     itkExceptionMacro(<< "Input has not been set");
 
-
-  const typename InputImageType::PointType &inputOrigin = inputPtr->GetOrigin();
-  const typename InputImageType::SpacingType &inputSpacing =
+  typename InputImageType::PointType inputOrigin = inputPtr->GetOrigin();
+  typename InputImageType::SpacingType inputSpacing =
     inputPtr->GetSpacing();
-  const typename InputImageType::DirectionType &inputDirection =
+  typename InputImageType::DirectionType inputDirection =
     inputPtr->GetDirection();
-  const typename InputImageType::SizeType &inputSize =
+  typename InputImageType::SizeType inputSize =
     inputPtr->GetLargestPossibleRegion().GetSize();
-  const typename InputImageType::IndexType &inputStartIndex =
+  typename InputImageType::IndexType inputStartIndex =
     inputPtr->GetLargestPossibleRegion().GetIndex();
 
-  typedef typename OutputImageType::SizeType SizeType;
-  typedef typename OutputImageType::IndexType IndexType;
-
   OutputImagePointer outputPtr;
-  typename OutputImageType::PointType outputOrigin;
-  typename OutputImageType::SpacingType outputSpacing;
-  SizeType outputSize;
-  IndexType outputStartIndex;
+  typename OutputImageType::PointType low_passOrigin;
+  typename OutputImageType::SpacingType low_passSpacing;
+  typename OutputImageType::SizeType low_passSize;
+  typename OutputImageType::IndexType low_passStartIndex;
+  typename OutputImageType::DirectionType low_passDirection = inputDirection;
 
   // we need to compute the output spacing, the output image size,
   // and the output image start index
 
   for (unsigned int level = 0; level < this->m_Levels ; ++level)
     {
-    unsigned int scaleFactorPerLevel = std::pow(this->m_ScaleFactor, level );
-
-    // Bands per level
+    // Bands per level . No downsampling.
     for (unsigned int band = 0 ; band < this->m_HighPassSubBands ; ++band)
       {
       // current_output = 0 is the low_pass, we deal with it at the end of the pyramid
       unsigned int current_output = 1 + level * m_HighPassSubBands + band;
-
-      // Calculate new Size and Index, per dim.
-      for (unsigned int idim = 0; idim < OutputImageType::ImageDimension; idim++)
-        {
-        // Size divided by scale
-        outputSize[idim] = static_cast<SizeValueType>(
-          std::floor(static_cast<double>(inputSize[idim]) / scaleFactorPerLevel));
-        if (outputSize[idim] < 1) outputSize[idim] = 1;
-        // Index dividided by scale
-        outputStartIndex[idim] = static_cast<IndexValueType>(
-          std::ceil(static_cast<double>(inputStartIndex[idim]) / scaleFactorPerLevel));
-        // Spacing
-        outputSpacing[idim] = inputSpacing[idim] ;
-        // Origin.
-        outputOrigin[idim] = inputOrigin[idim];
-        }
-
       // Set to the output
       outputPtr = this->GetOutput(current_output);
       if (!outputPtr) continue;
-      typename OutputImageType::RegionType outputLargestPossibleRegion;
-      outputLargestPossibleRegion.SetSize(outputSize);
-      outputLargestPossibleRegion.SetIndex(outputStartIndex);
+      typename OutputImageType::RegionType largestPossibleRegion;
+      largestPossibleRegion.SetSize(inputSize);
+      largestPossibleRegion.SetIndex(inputStartIndex);
 
-      outputPtr->SetLargestPossibleRegion(outputLargestPossibleRegion);
-      outputPtr->SetOrigin(outputOrigin);
-      outputPtr->SetSpacing(outputSpacing);
+      outputPtr->SetLargestPossibleRegion(largestPossibleRegion);
+      outputPtr->SetOrigin(inputOrigin);
+      outputPtr->SetSpacing(inputSpacing);
       outputPtr->SetDirection(inputDirection);
-      // The size of the low pass image is the one from the last level. Set it at the end
-      if(level == this->m_Levels - 1 && band == this->m_HighPassSubBands - 1)
-        {
-        outputPtr = this->GetOutput(0);
-        if (!outputPtr) continue;
-        outputPtr->SetLargestPossibleRegion(outputLargestPossibleRegion);
-        outputPtr->SetOrigin(outputOrigin);
-        outputPtr->SetSpacing(outputSpacing);
-        outputPtr->SetDirection(inputDirection);
-        }
+      }
 
+    // Calculate size of low_pass per level
+    // unsigned int scaleFactorPerLevel = std::pow(this->m_ScaleFactor, level + 1 );
+    // Calculate new Size and Index, per dim.
+    for (unsigned int idim = 0; idim < OutputImageType::ImageDimension; idim++)
+      {
+      // Size divided by scale
+      low_passSize[idim] = static_cast<SizeValueType>(
+        std::floor(static_cast<double>(inputSize[idim]) / this->m_ScaleFactor));
+      if (low_passSize[idim] < 1) low_passSize[idim] = 1;
+      // Index dividided by scale
+      low_passStartIndex[idim] = static_cast<IndexValueType>(
+        std::ceil(static_cast<double>(inputStartIndex[idim]) / this->m_ScaleFactor));
+      // Spacing
+      low_passSpacing[idim] = inputSpacing[idim] ;
+      // Origin.
+      low_passOrigin[idim] = inputOrigin[idim];
+      }
+
+    // Update InputSize with low_passSize.
+    inputSize  = low_passSize;
+    inputOrigin = low_passOrigin;
+    inputSpacing = low_passSpacing;
+    // inputDirection = low_passDirection;
+
+    if(level == this->m_Levels - 1 )
+      {
+      outputPtr = this->GetOutput(0);
+      if (!outputPtr) continue;
+      typename OutputImageType::RegionType largestPossibleRegion;
+      largestPossibleRegion.SetSize(low_passSize);
+      largestPossibleRegion.SetIndex(low_passStartIndex);
+      outputPtr->SetLargestPossibleRegion(largestPossibleRegion);
+      outputPtr->SetOrigin(low_passOrigin);
+      outputPtr->SetSpacing(low_passSpacing);
+      outputPtr->SetDirection(low_passDirection);
       }
     }
 }
@@ -314,63 +321,69 @@ template <typename TInputImage, typename TOutputImage, typename TWaveletFilterBa
     RegionType outputRegion;
     IndexType baseIndex = ptr->GetRequestedRegion().GetIndex();
     SizeType baseSize = ptr->GetRequestedRegion().GetSize();
+    RegionType baseRegion;
+
+    unsigned int exponent_factor = refLevel - 1;
+    // if (refIndex != 0)
+    //   exponent_factor = refLevel;
+    // else
+    //   exponent_factor = refLevel - 1;
 
     for (unsigned int idim = 0; idim < TOutputImage::ImageDimension; idim++)
       {
-      baseIndex[idim] *= static_cast<IndexValueType>(std::pow(this->m_ScaleFactor, refLevel - 1));
-      baseSize[idim] *= static_cast<SizeValueType>(std::pow(this->m_ScaleFactor, refLevel - 1));
+      baseIndex[idim] *= static_cast<IndexValueType>(std::pow(this->m_ScaleFactor, exponent_factor));
+      baseSize[idim] *= static_cast<SizeValueType>(std::pow(this->m_ScaleFactor, exponent_factor));
       }
+    baseRegion.SetIndex(baseIndex);
+    baseRegion.SetSize(baseSize);
 
     for (unsigned int level = 0; level < this->m_Levels; ++level)
       {
-      unsigned int scaleFactorPerLevel = std::pow(this->m_ScaleFactor, level);
       // Bands per level
       for (unsigned int band = 0 ; band < this->m_HighPassSubBands; ++band)
         {
         unsigned int n_output = 1 + level * this->m_HighPassSubBands + band ;
         if (n_output == refIndex) continue;
         if (!this->GetOutput(n_output)) continue;
-
-        for (unsigned int idim = 0; idim < TOutputImage::ImageDimension; idim++)
-          {
-          // Index by half.
-          outputIndex[idim] = static_cast<IndexValueType>(
-            std::ceil(static_cast<double>(baseIndex[idim]) / scaleFactorPerLevel));
-          // Size by half
-          outputSize[idim] = static_cast<SizeValueType>(
-            std::floor(static_cast<double>(baseSize[idim]) / scaleFactorPerLevel));
-          if (outputSize[idim] < 1) outputSize[idim] = 1;
-          outputIndex[idim] = baseIndex[idim];
-          }
-
-        outputRegion.SetIndex(outputIndex);
-        outputRegion.SetSize(outputSize);
-
-        // make sure the region is within the largest possible region
+        outputRegion = baseRegion;
         outputRegion.Crop(this->GetOutput(n_output)->GetLargestPossibleRegion());
         // set the requested region
         this->GetOutput(n_output)->SetRequestedRegion(outputRegion);
 
-        // Set low pass output
-        if(level == this->m_Levels - 1 && band == this->m_HighPassSubBands - 1)
-          {
-          unsigned int n_output = 0;
-          if (n_output == refIndex) continue;
-          if (!this->GetOutput(n_output)) continue;
-          outputRegion.SetIndex(outputIndex);
-          outputRegion.SetSize(outputSize);
-          outputRegion.Crop(this->GetOutput(n_output)->GetLargestPossibleRegion());
-          this->GetOutput(n_output)->SetRequestedRegion(outputRegion);
-          }
+        }
+      unsigned int scaleFactorPerLevel = std::pow(this->m_ScaleFactor, level + 1);
+      // Update baseRegion size and index for low_pass
+      for (unsigned int idim = 0; idim < TOutputImage::ImageDimension; idim++)
+        {
+        // Index by half.
+        outputIndex[idim] = static_cast<IndexValueType>(
+          std::ceil(static_cast<double>(baseIndex[idim]) / scaleFactorPerLevel));
+        // Size by half
+        outputSize[idim] = static_cast<SizeValueType>(
+          std::floor(static_cast<double>(baseSize[idim]) / scaleFactorPerLevel));
+        if (outputSize[idim] < 1)
+          itkExceptionMacro(<< "Failure at level: " << level << " in forward wavelet, going to negative image size. Too many levels for input image size.")
+        }
 
+      // Update base size;
+      baseIndex = outputIndex;
+      baseSize = outputSize;
+      baseRegion.SetIndex(baseIndex);
+      baseRegion.SetSize(baseSize);
+
+      // Set low pass output
+      if(level == this->m_Levels - 1 )
+        {
+        unsigned int n_output = 0;
+        if (n_output == refIndex) continue;
+        if (!this->GetOutput(n_output)) continue;
+        outputRegion.Crop(this->GetOutput(n_output)->GetLargestPossibleRegion());
+        this->GetOutput(n_output)->SetRequestedRegion(baseRegion);
         }
       }
     }
 }
 
-/**
- * GenerateInputRequestedRegion
- */
 template <typename TInputImage, typename TOutputImage, typename TWaveletFilterBank>
 void WaveletFrequencyForward<TInputImage, TOutputImage, TWaveletFilterBank>
 ::GenerateInputRequestedRegion()
@@ -454,22 +467,13 @@ void WaveletFrequencyForward< TInputImage, TOutputImage, TWaveletFilterBank>
     multiplyLowFilter->SetInput1(filterBank->GetOutputLowPass()) ;
     multiplyLowFilter->SetInput2(inputPerLevel) ;
     multiplyLowFilter->InPlaceOn();
-    if (level == this->m_Levels - 1) // Set low_pass output (index=0)
-      {
-      multiplyLowFilter->GraftOutput(this->GetOutput(0));
-      multiplyLowFilter->Update();
-      this->UpdateProgress( static_cast< float >( m_TotalOutputs - 1 )
-        / static_cast< float >( m_TotalOutputs ) );
-      this->GraftNthOutput(0, multiplyLowFilter->GetOutput());
-      continue;
-      }
-    else // update inputPerLevel
-      {
-      multiplyLowFilter->Update();
-      inputPerLevel = multiplyLowFilter->GetOutput();
-      }
+    multiplyLowFilter->Update();
+    inputPerLevel = multiplyLowFilter->GetOutput();
+
     /******* DownSample for the next Level iteration *****/
-    typedef itk::BinShrinkImageFilter<OutputImageType,OutputImageType> ShrinkFilterType;
+    // typedef itk::BinShrinkImageFilter<OutputImageType,OutputImageType> ShrinkFilterType;
+    typedef itk::ShrinkImageFilter<OutputImageType,OutputImageType> ShrinkFilterType;
+    // typedef itk::FrequencyShrinkImageFilter<OutputImageType,OutputImageType> ShrinkFilterType;
     typename ShrinkFilterType::Pointer shrinkFilter = ShrinkFilterType::New();
     shrinkFilter->SetInput(inputPerLevel);
     shrinkFilter->SetShrinkFactors(2);
@@ -485,8 +489,20 @@ void WaveletFrequencyForward< TInputImage, TOutputImage, TWaveletFilterBank>
     changeInfoFilter->ChangeOriginOn();
     changeInfoFilter->UseReferenceImageOn();
     changeInfoFilter->SetReferenceImage(inputPerLevel.GetPointer()); // Use input image as reference.
-    changeInfoFilter->Update();
-    inputPerLevel = changeInfoFilter->GetOutput();
+    if (level == this->m_Levels - 1) // Set low_pass output (index=0)
+      {
+      changeInfoFilter->GraftOutput(this->GetOutput(0));
+      changeInfoFilter->Update();
+      this->UpdateProgress( static_cast< float >( m_TotalOutputs - 1 )
+        / static_cast< float >( m_TotalOutputs ) );
+      this->GraftNthOutput(0, changeInfoFilter->GetOutput());
+      continue;
+      }
+    else // update inputPerLevel
+      {
+        changeInfoFilter->Update();
+        inputPerLevel = changeInfoFilter->GetOutput();
+      }
 
     }
 }
