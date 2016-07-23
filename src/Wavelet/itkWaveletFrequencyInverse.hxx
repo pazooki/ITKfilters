@@ -23,8 +23,9 @@
 #include <algorithm>
 #include <itkMultiplyImageFilter.h>
 #include <itkAddImageFilter.h>
-#include <itkExpandImageFilter.h>
-#include <itkComplexBSplineInterpolateImageFunction.h>
+#include <itkFrequencyExpandImageFilter.h>
+// #include <itkExpandImageFilter.h>
+// #include <itkComplexBSplineInterpolateImageFunction.h>
 // #include <itkResampleImageFilter.h>
 // #include <itkIdentityTransform.h>
 #include <itkChangeInformationImageFilter.h>
@@ -284,15 +285,16 @@ void WaveletFrequencyInverse< TInputImage, TOutputImage, TWaveletFilterBank>
 
   for (int level = this->m_Levels - 1 ; level > -1   ; --level)
     {
-    // Upsample LowPass
-    typedef itk::ComplexBSplineInterpolateImageFunction<OutputImageType> InterpolatorType;
-    typename InterpolatorType::Pointer interpolator = InterpolatorType::New();
-    interpolator->SetSplineOrder(3);
-    typedef itk::ExpandImageFilter<OutputImageType,OutputImageType> ExpandFilterType;
+    // // Upsample LowPass
+    // typedef itk::ComplexBSplineInterpolateImageFunction<OutputImageType> InterpolatorType;
+    // typename InterpolatorType::Pointer interpolator = InterpolatorType::New();
+    // interpolator->SetSplineOrder(3);
+    // typedef itk::ExpandImageFilter<OutputImageType,OutputImageType> ExpandFilterType;
+    typedef itk::FrequencyExpandImageFilter<OutputImageType,OutputImageType> ExpandFilterType;
     typename ExpandFilterType::Pointer upsampleFilter = ExpandFilterType::New();
     upsampleFilter->SetInput(low_pass_per_level);
     upsampleFilter->SetExpandFactors(this->m_ScaleFactor);
-    upsampleFilter->SetInterpolator(interpolator);
+    // upsampleFilter->SetInterpolator(interpolator);
     upsampleFilter->Update();
     low_pass_per_level = upsampleFilter->GetOutput();
     // Ignore modifications of origin and spacing of upsample filters.

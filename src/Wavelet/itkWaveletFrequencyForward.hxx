@@ -22,9 +22,9 @@
 #include "itkImage.h"
 #include <algorithm>
 #include <itkMultiplyImageFilter.h>
-#include <itkBinShrinkImageFilter.h>
-#include <itkShrinkImageFilter.h>
-// #include <itkFrequencyShrinkImageFilter.h>
+#include <itkFrequencyShrinkImageFilter.h>
+// #include <itkBinShrinkImageFilter.h>
+// #include <itkShrinkImageFilter.h>
 #include <itkChangeInformationImageFilter.h>
 namespace itk
 {
@@ -472,8 +472,8 @@ void WaveletFrequencyForward< TInputImage, TOutputImage, TWaveletFilterBank>
 
     /******* DownSample for the next Level iteration *****/
     // typedef itk::BinShrinkImageFilter<OutputImageType,OutputImageType> ShrinkFilterType;
-    typedef itk::ShrinkImageFilter<OutputImageType,OutputImageType> ShrinkFilterType;
-    // typedef itk::FrequencyShrinkImageFilter<OutputImageType,OutputImageType> ShrinkFilterType;
+    // typedef itk::ShrinkImageFilter<OutputImageType,OutputImageType> ShrinkFilterType;
+    typedef itk::FrequencyShrinkImageFilter<OutputImageType,OutputImageType> ShrinkFilterType;
     typename ShrinkFilterType::Pointer shrinkFilter = ShrinkFilterType::New();
     shrinkFilter->SetInput(inputPerLevel);
     shrinkFilter->SetShrinkFactors(2);

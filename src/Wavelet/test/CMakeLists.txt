@@ -27,6 +27,14 @@ target_link_libraries(testFrequencyShrink.exe ${ITK_LIBRARIES})
 target_link_libraries(testFrequencyShrink.exe ${Boost_PROGRAM_OPTIONS_LIBRARY})
 target_link_libraries(testFrequencyShrink.exe ${VTK_LIBRARIES})
 target_link_libraries(testFrequencyShrink.exe Qt5::Widgets)
+# testFrequencyExpand
+add_executable(testFrequencyExpand.exe testFrequencyExpand.cpp)
+set_source_files_properties (testFrequencyExpand.exe PROPERTIES COMPILE_FLAGS "-Wno-sign-compare")
+target_link_libraries(testFrequencyExpand.exe gtest_main ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries(testFrequencyExpand.exe ${ITK_LIBRARIES})
+target_link_libraries(testFrequencyExpand.exe ${Boost_PROGRAM_OPTIONS_LIBRARY})
+target_link_libraries(testFrequencyExpand.exe ${VTK_LIBRARIES})
+target_link_libraries(testFrequencyExpand.exe Qt5::Widgets)
 ##############
 
 # testWavelet

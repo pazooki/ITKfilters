@@ -1,24 +1,29 @@
-/* Linear index to sub index.
-Copyright 2016 Pablo Hernandez-Cerdan
+/*=========================================================================
+ *  Linear index to subindices.
+ *  Copyright 2016 Pablo Hernandez-Cerdan
+ *  Copyright Insight Software Consortium
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *
+ *         http://www.apache.org/licenses/LICENSE-2.0.txt
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ *
+ *=========================================================================*/
 
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-  http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
-
+#ifndef Ind2Sub_h
+#define Ind2Sub_h
 #include <array>
 #include <iostream>
 
 /**
- * @brief Return SubIndex [i,j,k,...] from linear in
+ * @brief Return SubIndex [i,j,k,...] from linear index and matrix size.
  * Based on Ind2Sub from Matlab.
  * @note Indices range from 0 to ns - 1
  * Linear index cannot exceed the accumulated product of sizes, throwing runtime errors.
@@ -59,6 +64,7 @@ Ind2Sub(const unsigned int &linear_index, const std::array<unsigned int, D> & ns
   return out;
 
 };
+#endif
 
 // //TEST
 // int main(int, char**)
