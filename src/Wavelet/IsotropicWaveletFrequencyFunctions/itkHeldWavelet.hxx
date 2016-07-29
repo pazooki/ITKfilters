@@ -38,72 +38,71 @@ HeldWavelet< TFunctionValue, VImageDimension, TInput >
 template< typename TFunctionValue, unsigned int VImageDimension, typename TInput >
 typename HeldWavelet< TFunctionValue, VImageDimension, TInput >::FunctionValueType
 HeldWavelet< TFunctionValue, VImageDimension, TInput >
-::Evaluate(const TInput & position) const
+::Evaluate(const TInput & point_position) const
 {
-  TFunctionValue normPosition = 0.0;
+  TFunctionValue freq_in_hz = 0.0;
   for (unsigned int i = 0; i < VImageDimension ; i++)
-    normPosition += position[i]*position[i];
+    freq_in_hz += point_position[i] * point_position[i];
 
-  return this->EvaluateFunction(normPosition);
+  return this->EvaluateFunction(freq_in_hz);
 }
 
 template< typename TFunctionValue, unsigned int VImageDimension, typename TInput >
 typename HeldWavelet< TFunctionValue, VImageDimension, TInput >::FunctionValueType
 HeldWavelet< TFunctionValue, VImageDimension, TInput >
-::EvaluateFunction(const FunctionValueType & normPosition) const
+::EvaluateFunction(const FunctionValueType & freq_in_hz) const
 {
-  if(normPosition <= 0.25 && normPosition > 0.125)
+  // freq_in_rad_per_sec = freq_in_hz * 2 * pi
+  if(freq_in_hz > 0.125 && freq_in_hz <= 0.25 )
     return static_cast<TFunctionValue>(std::cos(2.0 * itk::Math::pi  *
-        this->ComputePolynom(normPosition, this->m_PolynomialOrder)));
+        this->ComputePolynom(freq_in_hz, this->m_PolynomialOrder)));
 
-  if(normPosition <= 0.5 && normPosition > 0.25)
+  if(freq_in_hz > 0.25 && freq_in_hz <= 0.5 )
     return static_cast<TFunctionValue>(std::sin(2.0 * itk::Math::pi  *
-        this->ComputePolynom(normPosition / 2.0, this->m_PolynomialOrder)));
-  else
-    return 0;
+        this->ComputePolynom(freq_in_hz / 2.0, this->m_PolynomialOrder)));
+
+  return 0;
 }
 
 template< typename TFunctionValue, unsigned int VImageDimension, typename TInput >
 typename HeldWavelet< TFunctionValue, VImageDimension, TInput >::FunctionValueType
 HeldWavelet< TFunctionValue, VImageDimension, TInput >
-::EvaluateForwardLowPassFilter(const FunctionValueType & normPosition) const
+::EvaluateForwardLowPassFilter(const FunctionValueType & freq_in_hz) const
 {
   FunctionValueType value =
-    std::pow(normPosition, this->m_HighPassSubBands) *
+    std::pow(freq_in_hz, this->m_HighPassSubBands) *
     std::pow(2.0, 2*this->m_HighPassSubBands - 1);
   if ( value > 0.25 )
     return this->EvaluateFunction(value);
-  else
-    return 1;
+  return 1;
 }
 
 template< typename TFunctionValue, unsigned int VImageDimension, typename TInput >
 typename HeldWavelet< TFunctionValue, VImageDimension, TInput >::FunctionValueType
 HeldWavelet< TFunctionValue, VImageDimension, TInput >
-::EvaluateForwardHighPassFilter(const FunctionValueType & normPosition) const
+::EvaluateForwardHighPassFilter(const FunctionValueType & freq_in_hz) const
 {
   FunctionValueType value =
-    std::pow(normPosition, this->m_HighPassSubBands) *
+    std::pow(freq_in_hz, this->m_HighPassSubBands) *
     std::pow(2.0, this->m_HighPassSubBands - 1);
   if ( value < 0.25 )
     return this->EvaluateFunction(value);
-  else
-    return 1;
+  return 1;
 }
 
 template< typename TFunctionValue, unsigned int VImageDimension, typename TInput >
 typename HeldWavelet< TFunctionValue, VImageDimension, TInput >::FunctionValueType
 HeldWavelet< TFunctionValue, VImageDimension, TInput >
-::EvaluateForwardSubBand(const FunctionValueType & normPosition, unsigned int j)
+::EvaluateForwardSubBand(const FunctionValueType & freq_in_hz, unsigned int j)
 const
 {
-  if (j == this->m_HighPassSubBands) return this->EvaluateForwardHighPassFilter(normPosition);
-  if (j == 0) return this->EvaluateForwardLowPassFilter(normPosition);
+  if (j == this->m_HighPassSubBands) return this->EvaluateForwardHighPassFilter(freq_in_hz);
+  if (j == 0) return this->EvaluateForwardLowPassFilter(freq_in_hz);
   if (j > this->m_HighPassSubBands || j < 0)
     throw itk::ExceptionObject(__FILE__, __LINE__,
             "Invalid SubBand", ITK_LOCATION);
   FunctionValueType value =
-    std::pow(normPosition, this->m_HighPassSubBands) *
+    std::pow(freq_in_hz, this->m_HighPassSubBands) *
     std::pow(2.0, 2*this->m_HighPassSubBands - 1 - j);
   return this->EvaluateFunction(value);
 }
@@ -111,25 +110,25 @@ const
 template< typename TFunctionValue, unsigned int VImageDimension, typename TInput >
 typename HeldWavelet< TFunctionValue, VImageDimension, TInput >::FunctionValueType
 HeldWavelet< TFunctionValue, VImageDimension, TInput >
-::EvaluateInverseLowPassFilter(const FunctionValueType & normPosition) const
+::EvaluateInverseLowPassFilter(const FunctionValueType & freq_in_hz) const
 {
-  return this->EvaluateForwardLowPassFilter(normPosition);
+  return this->EvaluateForwardLowPassFilter(freq_in_hz);
 }
 
 template< typename TFunctionValue, unsigned int VImageDimension, typename TInput >
 typename HeldWavelet< TFunctionValue, VImageDimension, TInput >::FunctionValueType
 HeldWavelet< TFunctionValue, VImageDimension, TInput >
-::EvaluateInverseHighPassFilter(const FunctionValueType & normPosition) const
+::EvaluateInverseHighPassFilter(const FunctionValueType & freq_in_hz) const
 {
-  return this->EvaluateForwardHighPassFilter(normPosition);
+  return this->EvaluateForwardHighPassFilter(freq_in_hz);
 }
 
 template< typename TFunctionValue, unsigned int VImageDimension, typename TInput >
 typename HeldWavelet< TFunctionValue, VImageDimension, TInput >::FunctionValueType
 HeldWavelet< TFunctionValue, VImageDimension, TInput >
-::EvaluateInverseSubBand(const FunctionValueType & normPosition, unsigned int j) const
+::EvaluateInverseSubBand(const FunctionValueType & freq_in_hz, unsigned int j) const
 {
-  return this->EvaluateForwardSubBand(normPosition, j);
+  return this->EvaluateForwardSubBand(freq_in_hz, j);
 }
 
 template< typename TFunctionValue, unsigned int VImageDimension, typename TInput >
@@ -217,7 +216,6 @@ HeldWavelet< TFunctionValue, VImageDimension, TInput >
   Superclass::PrintSelf(os, indent);
 
   os << indent << "PolynomialOrder: " << this->m_PolynomialOrder << std::endl;
-  os << indent << "HighPassSubBands: " << this->m_HighPassSubBands << std::endl;
 }
 } // end namespace itk
 

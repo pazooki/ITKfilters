@@ -24,6 +24,7 @@
 #include "itkProgressReporter.h"
 #include "Ind2Sub.h"
 #include "itkPasteImageFilter.h"
+#include "itkImageRegionConstIterator.h"
 
 namespace itk
 {
@@ -39,14 +40,6 @@ FrequencyExpandImageFilter< TInputImage, TOutputImage >
     {
     m_ExpandFactors[j] = 1;
     }
-
-  // Setup the default interpolator
-  typename DefaultInterpolatorType::Pointer interp =
-    DefaultInterpolatorType::New();
-
-  m_Interpolator = static_cast< InterpolatorType * >(
-    interp.GetPointer() );
-
 }
 
 /**
@@ -66,10 +59,6 @@ FrequencyExpandImageFilter< TInputImage, TOutputImage >
     os << m_ExpandFactors[j] << ", ";
     }
   os << m_ExpandFactors[j] << "]" << std::endl;
-
-  os << indent << "Interpolator: ";
-  os << m_Interpolator.GetPointer() << std::endl;
-
 }
 
 /**
@@ -182,6 +171,31 @@ FrequencyExpandImageFilter< TInputImage, TOutputImage >
       }
     progress.CompletedPixel();
     }
+  /* TODO: Do you have to "recalculate" DC component zero frequency bins?
+  *           modifyFFT --> What is the new DC?
+  * ANSWER: I don't think you can calculate modified DC from FFT.DC components
+  * can be set to zero BEFORE performing FFT.
+  * data = data - mean(data) ---> FFT ---> DC = 0
+  */
+  // Set zero value to DC: mean real value
+  // itk::ImageRegionConstIterator<OutputImageType> outIt(
+  //   this->GetOutput(),
+  //   this->GetOutput()->GetLargestPossibleRegion());
+  // outIt.GoToBegin();
+  // size_t linearOutputSize(1);
+  // for ( unsigned int i=0; i < TInputImage::ImageDimension; ++i )
+  //   linearOutputSize *= outputSize[i];
+  // typename OutputImageType::PixelType mean(0);
+  // // Skip from the mean calculation the first index that stores the old zero frequency value.
+  // ++outIt;
+  // while(!outIt.IsAtEnd())
+  //   {
+  //   // mean += outIt.Get() * (1.0/linearOutputSize);
+  //   mean += outIt.Get();
+  //   ++outIt;
+  //   }
+  // this->GetOutput()->SetPixel(this->GetOutput()->GetLargestPossibleRegion().GetIndex(), mean);
+
 }
 
 /**

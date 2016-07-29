@@ -7,6 +7,7 @@
 #include "itkImageFileReader.h"
 #include "itkWaveletFrequencyFilterBankGenerator.h"
 #include "itkHeldWavelet.h"
+#include "itkVowWavelet.h"
 #include "itkForwardFFTImageFilter.h"
 #include "itkInverseFFTImageFilter.h"
 #include <itkComplexToRealImageFilter.h>
@@ -19,7 +20,9 @@ int main(int argc, char** argv){
     auto option_map = program_options(argc, argv);
     bool VFLAG = option_map["visualize"].as<bool>();
     bool DEBUG = option_map["debug"].as<bool>();
-    const string img_file{"/home/phc/repository_local/ITKfilters/src/fixtures/collagen_98x98x20.tiff"};
+    unsigned int input_n = option_map["input_n"].as<int>();
+    // const string img_file{"/home/phc/repository_local/ITKfilters/src/fixtures/collagen_98x98x20.tiff"};
+    const string img_file{"/home/phc/repository_local/ITKfilters/src/fixtures/collagen_64x64x16.tiff"};
     const unsigned int dimension = 3;
     using PixelType = double;
     using ImageType = itk::Image<PixelType, dimension>;
@@ -37,30 +40,25 @@ int main(int argc, char** argv){
     typedef typename FFTFilterType::OutputImageType ComplexImageType;
 
     // Set the WaveletFunctionType and the WaveletFilterBank
-    typedef itk::HeldWavelet<> WaveletFunctionType;
+    // typedef itk::HeldWavelet<> WaveletFunctionType;
+    typedef itk::VowWavelet<> WaveletFunctionType;
     typedef itk::WaveletFrequencyFilterBankGenerator< ComplexImageType, WaveletFunctionType> WaveletFilterBankType;
     typename WaveletFilterBankType::Pointer forwardFilterBank = WaveletFilterBankType::New();
-    unsigned int high_sub_bands = 5;
+    unsigned int high_sub_bands = input_n;
     forwardFilterBank->SetHighPassSubBands(high_sub_bands);
     forwardFilterBank->SetSize(fftFilter->GetOutput()->GetLargestPossibleRegion().GetSize());
     forwardFilterBank->SetDebug(DEBUG);
     forwardFilterBank->Update();
-    forwardFilterBank->Print(std::cout);
-
-    auto lowPassImage = forwardFilterBank->GetOutput(0);
-    cout << lowPassImage->GetLargestPossibleRegion() << endl;
-    auto bandImage = forwardFilterBank->GetOutputSubBand(1);
-    cout << bandImage->GetLargestPossibleRegion() << endl;
-    auto highPassImage = forwardFilterBank->GetOutput(high_sub_bands);
-    cout << highPassImage->GetLargestPossibleRegion() << endl;
+    // forwardFilterBank->Print(std::cout);
 
     //Get real part of complex image for visualization
     typedef itk::ComplexToRealImageFilter<ComplexImageType, ImageType> ComplexToRealFilter;
     typename ComplexToRealFilter::Pointer complexToRealFilter = ComplexToRealFilter::New();
+    std::cout << "Real Part of ComplexImage:"<< std::endl;
     for (unsigned int i = 0 ; i < high_sub_bands + 1 ; ++i)
     {
         std::cout << "Band: " << i << " / " << forwardFilterBank->GetHighPassSubBands() << std::endl;
-        std::cout << "Largest Region: " << forwardFilterBank->GetOutput(i)->GetLargestPossibleRegion() << std::endl;
+        // std::cout << "Largest Region: " << forwardFilterBank->GetOutput(i)->GetLargestPossibleRegion() << std::endl;
 
         complexToRealFilter->SetInput(forwardFilterBank->GetOutput(i) );
         complexToRealFilter->Update();
@@ -70,6 +68,7 @@ int main(int argc, char** argv){
     // Inverse FFT Transform
     typedef itk::InverseFFTImageFilter<ComplexImageType, ImageType> InverseFFTFilterType;
     typename InverseFFTFilterType::Pointer inverseFFT = InverseFFTFilterType::New();
+    if(VFLAG) std::cout << "InverseFFT:"  << std::endl;
     for (unsigned int i = 0 ; i < high_sub_bands + 1 ; ++i)
     {
         if(VFLAG) std::cout << "Band: " << i << " / " << forwardFilterBank->GetHighPassSubBands() << std::endl;
@@ -85,10 +84,12 @@ int main(int argc, char** argv){
     inverseFilterBank->SetSize(fftFilter->GetOutput()->GetLargestPossibleRegion().GetSize());
     inverseFilterBank->SetDebug(DEBUG);
     inverseFilterBank->Update();
-    inverseFilterBank->Print(std::cout);
+    // inverseFilterBank->Print(std::cout);
 
-    // Compare images: TODO use itk test facilities instead of region iterators.
+    //Compare images: TODO use itk test facilities instead of region iterators?
+    // itk::Testing::ComparisonImageFilter does not work with complex
     typedef typename itk::ImageRegionConstIterator<ComplexImageType>     ComplexConstRegionIterator;
+    unsigned int ne = 0;
     for (unsigned int i = 0 ; i < high_sub_bands + 1 ; ++i)
       {
       typename ComplexImageType::Pointer outForward = forwardFilterBank->GetOutput(i);
@@ -97,11 +98,18 @@ int main(int argc, char** argv){
       ComplexConstRegionIterator itInverse(outInverse, outInverse->GetLargestPossibleRegion() );
       itForward.GoToBegin();
       itInverse.GoToBegin();
+      unsigned int ne_per_band = 0;
       while(!itForward.IsAtEnd() || !itInverse.IsAtEnd())
         {
-        itForward.Get() == itInverse.Get();
+        if(itForward.Get() != itInverse.Get())
+            ++ne_per_band;
         ++itForward;
         ++itInverse;
         }
+      ne+= ne_per_band;
       }
+    if (ne > 0 )
+        std::cout << "Comparison Error, num of errors: " << ne << '\n';
+    else
+        std::cout << "Pass! no comparison errors: " << ne << '\n';
 }

@@ -15,26 +15,35 @@
  *  limitations under the License.
  *
  *=========================================================================*/
-#ifndef itkHeldWavelet_h
-#define itkHeldWavelet_h
+#ifndef itkVowWavelet_h
+#define itkVowWavelet_h
 
 #include "itkIsotropicWaveletFrequencyFunction.h"
 
 namespace itk
 {
-/** \class HeldWavelet
- * \brief Wavelet based on paper Steerable Wavelet Frames Based on the Held
- * Transform (Held et al 2010).
+/** \class VowWavelet
+ * \brief Wavelet based on paper VOW: Variance-Optimal Wavelets for Steerable Pyramid (P.Pad et al 2014).
  *
  * Implement function in frequency space.
- *
- * h(w) = cos(2*pi*q(|w|)) for w in (1/8, 1/4]
- * h(w) = sin(2*pi*q(|w/2|)) for w in (1/4, 1/2]
- * h(w) = 0 elsewhere.
+ \f{equation}
+ \label{VOW}
+   h(\omega) =
+     \begin{cases}
+     \begin{aligned}
+       &\sqrt{\frac{1}{2} + \frac{\tan(\kappa(1+2\log_2\frac{2\omega}{\pi})}{2\tan(\kappa)}} , &\omega \in [\frac{\pi}{4} , \frac{\pi}{2} [ \\
+       &\sqrt{\frac{1}{2} - \frac{\tan(\kappa(1+2\log_2\frac{\omega}{\pi}))}{2\tan(\kappa)}} , &\omega \in [\frac{\pi}{2} , \pi ] \\
+       &0, &\text{otherwise}
+     \end{aligned}
+     \end{cases}
+ \f{equation}
+ \f{equation}
+   \text{where } \kappa \in [0, \frac{\pi}{2}] \text{ is found to be } 0.75
+ \f{equation}
  *
  * Where q(t) is a m grade polynomial (m can be chosen) which elements are
  * calculated so the wavelet has desirable properties.
- * ie, tight frame, Held Paritition of Unity, etc. (see paper for more info)
+ * ie, tight frame, Vow Paritition of Unity, etc. (see paper for more info)
  *
  * \ingroup SpatialFunctions
  * \ingroup ITKWavelets
@@ -42,12 +51,12 @@ namespace itk
 template< typename TFunctionValue = double,
           unsigned int VImageDimension = 3,
           typename TInput = Point< SpacePrecisionType, VImageDimension > >
-class HeldWavelet:
+class VowWavelet:
   public IsotropicWaveletFrequencyFunction< TFunctionValue, VImageDimension, TInput >
 {
 public:
   /** Standard class typedefs. */
-  typedef HeldWavelet                                        Self;
+  typedef VowWavelet                                        Self;
   typedef IsotropicWaveletFrequencyFunction< TFunctionValue, VImageDimension, TInput > Superclass;
   typedef SmartPointer< Self >                                Pointer;
   typedef SmartPointer< const Self >                          ConstPointer;
@@ -56,7 +65,7 @@ public:
   itkNewMacro(Self);
 
   /** Run-time type information (and related methods). */
-  itkTypeMacro(HeldWavelet, SpatialFunction);
+  itkTypeMacro(VowWavelet, SpatialFunction);
 
   /** Input type for the function. */
   typedef typename Superclass::InputType InputType;
@@ -68,7 +77,7 @@ public:
   typedef FixedArray< double, VImageDimension > ArrayType;
 
   /** Evaluate the function at a given point position. */
-  FunctionValueType Evaluate(const TInput & point_position) const ITK_OVERRIDE;
+  FunctionValueType Evaluate(const TInput & position) const ITK_OVERRIDE;
 
   /** Evaluate the function */
   FunctionValueType EvaluateFunction(const FunctionValueType& freq_in_hz) const ITK_OVERRIDE;
@@ -93,30 +102,26 @@ public:
       unsigned int j) const ITK_OVERRIDE;
 
   /** Gets and sets parameters */
-  itkSetMacro(PolynomialOrder, unsigned int);
-  itkGetConstMacro(PolynomialOrder, unsigned int);
-
-  FunctionValueType ComputePolynom(
-      const FunctionValueType & freq_in_hz,
-      const unsigned int & order) const;
+  itkSetMacro(Kappa, TFunctionValue);
+  itkGetConstMacro(Kappa, TFunctionValue);
 
 protected:
-  HeldWavelet();
-  virtual ~HeldWavelet();
+  VowWavelet();
+  virtual ~VowWavelet();
   void PrintSelf(std::ostream & os, Indent indent) const ITK_OVERRIDE;
 
 private:
-  HeldWavelet(const Self &) ITK_DELETE_FUNCTION;
+  VowWavelet(const Self &) ITK_DELETE_FUNCTION;
   void operator=(const Self &) ITK_DELETE_FUNCTION;
 
-  /** The order of the polynom. */
-  unsigned int m_PolynomialOrder;
+  /** kappa value, default is optimal:0.75 */
+ TFunctionValue m_Kappa;
 
 };
 } // end namespace itk
 
 #ifndef ITK_MANUAL_INSTANTIATION
-#include "itkHeldWavelet.hxx"
+#include "itkVowWavelet.hxx"
 #endif
 
 #endif

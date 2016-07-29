@@ -9,6 +9,7 @@
 // #include "itkInverseWaveletFFT.h"
 #include "itkWaveletFrequencyFilterBankGenerator.h"
 #include "itkHeldWavelet.h"
+#include "itkVowWavelet.h"
 #include "itkForwardFFTImageFilter.h"
 #include "itkInverseFFTImageFilter.h"
 #include "visualize_functions.h"
@@ -41,7 +42,8 @@ int main(int argc, char** argv){
     typedef typename FFTFilterType::OutputImageType ComplexImageType;
 
     // Set the WaveletFunctionType and the WaveletFilterBank
-    typedef itk::HeldWavelet<> WaveletFunctionType;
+    // typedef itk::HeldWavelet<> WaveletFunctionType;
+    typedef itk::VowWavelet<> WaveletFunctionType;
     typedef itk::WaveletFrequencyFilterBankGenerator< ComplexImageType, WaveletFunctionType> WaveletFilterBankType;
     typedef itk::WaveletFrequencyForward<ComplexImageType, ComplexImageType, WaveletFilterBankType> ForwardWaveletType;
     typename ForwardWaveletType::Pointer forwardWavelet = ForwardWaveletType::New();

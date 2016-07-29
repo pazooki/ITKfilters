@@ -17,9 +17,9 @@ using namespace itk;
 int main(int argc, char** argv){
     auto option_map = program_options(argc, argv);
     bool VFLAG = option_map["visualize"].as<bool>();
-    bool DEBUG = option_map["debug"].as<bool>();
-    unsigned int input_n = option_map["input_n"].as<int>();
-    unsigned int input_l = option_map["input_l"].as<int>();
+    // bool DEBUG = option_map["debug"].as<bool>();
+    // unsigned int input_n = option_map["input_n"].as<int>();
+    // unsigned int input_l = option_map["input_l"].as<int>();
     const string img_file{"/home/phc/repository_local/ITKfilters/src/fixtures/collagen_64x64x16.tiff"};
     const unsigned int dimension = 3;
     using PixelType = double;

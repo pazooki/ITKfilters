@@ -29,23 +29,19 @@ namespace itk
  * in each dimension.
  * This filter discard all the high frequency bins depending on the shrink factor
  * | 0        1   ... N/2-1   N/2             : N/2+1 ... N-1 |
- * | 0 (AC)   Low ... High    Highest-Nyquist : High  ... Low |
+ * | 0 (DC)   Low ... High    Highest-Nyquist : High  ... Low |
  * Considering a shrink factor of 2.
- * | 0  1 ... N/4 ... N/2 : N/2+1 ... N-1-N/4 ... N -1 |
- * The outputs will be, no average, just chopping high-frequencies.
+ * | 0  1 ... N/4 ... N/2 : N/2+1 ... N-1-N/4 ... N-1 |
+ * The output involves no interpolation, just chopping off high-frequencies.
  * | 0  1 ... N/4 : N-1-N/4 ... N-1 |
  * If N = Even:
  * | Samples: N/4 + 1 (0 + "New Nyquist") | N/4 - 1 |
  *
- *
  * The output image size in each dimension is given by:
- *
- * outputSize[j] = max( std::floor(inputSize[j]/shrinkFactor[j]), 1 );
+ * outputSize[j] = std::floor(inputSize[j]/shrinkFactor[j]);
  *
  * This filter is implemented so that the starting extent of the first
  * pixel of the output matches that of the input.
- *
- * \image html FrequencyShrinkGrid.png "The change in image geometry from a 5x5 image binned by a factor of 2x2."
  *
  * This code was contributed in the Insight Journal paper:
  * https://hdl.handle.net....
@@ -58,7 +54,7 @@ class FrequencyShrinkImageFilter :
 {
 public:
   /** Standard class typedefs. */
-  typedef FrequencyShrinkImageFilter                         Self;
+  typedef FrequencyShrinkImageFilter                   Self;
   typedef ImageToImageFilter<TInputImage,TOutputImage> Superclass;
   typedef SmartPointer<Self>                           Pointer;
   typedef SmartPointer<const Self>                     ConstPointer;
@@ -76,7 +72,6 @@ public:
   typedef typename InputImageType::Pointer      InputImagePointer;
   typedef typename InputImageType::ConstPointer InputImageConstPointer;
 
-  typedef typename TOutputImage::OffsetType  OutputOffsetType;
   typedef typename TOutputImage::IndexType   OutputIndexType;
   typedef typename TInputImage::IndexType    InputIndexType;
 
@@ -109,7 +104,6 @@ public:
    * \sa ProcessObject::GenerateInputRequestedRegion() */
   virtual void GenerateInputRequestedRegion() ITK_OVERRIDE;
 
-
 #ifdef ITK_USE_CONCEPT_CHECKING
   /** Begin concept checking */
   itkConceptMacro(InputConvertibleToOutputCheck,
@@ -131,22 +125,6 @@ private:
 
   ShrinkFactorsType m_ShrinkFactors;
 
-  /** Round different pixel types. */
-  template< class TOutputType, class TInputType >
-  typename EnableIfC<std::numeric_limits<TOutputType>::is_integer,  TOutputType>::Type
-  RoundIfInteger( TInputType input )
-    {
-      return Math::Round< TOutputType >( input );
-    }
-
-  // For Non-fundamental types numeric_limits is not specialized, and
-  // is_integer defaults to false.
-  template< class TOutputType, class TInputType >
-  typename DisableIfC<std::numeric_limits<TOutputType>::is_integer,  TOutputType>::Type
-  RoundIfInteger( const TInputType & input, ...)
-    {
-      return static_cast<TOutputType>(input);
-    }
 };
 
 } // end namespace itk

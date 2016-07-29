@@ -170,7 +170,6 @@ void WaveletFrequencyFilterBankGenerator< TOutputImage, TWaveletFunction>
   FunctionValueType w = 0.0;
   typename OutputImageType::IndexType index;
   typename OutputImageType::SpacingType w_vector;
-  FunctionValueType N_half;
   for (inputIt.GoToBegin(); !inputIt.IsAtEnd(); ++inputIt)
     {
     w2 = 0.0;

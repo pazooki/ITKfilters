@@ -19,7 +19,6 @@
 #define itkFrequencyExpandImageFilter_h
 
 #include "itkImageToImageFilter.h"
-#include "itkLinearInterpolateImageFunction.h"
 
 namespace itk
 {
@@ -94,17 +93,6 @@ public:
   typedef typename InputImageType::Pointer     InputImagePointer;
   typedef typename OutputImageType::Pointer    OutputImagePointer;
 
-  /** Typedef support for the interpolation function. */
-  typedef double                                                   CoordRepType;
-  typedef InterpolateImageFunction< InputImageType, CoordRepType > InterpolatorType;
-  typedef typename InterpolatorType::Pointer                       InterpolatorPointer;
-  typedef LinearInterpolateImageFunction< InputImageType, CoordRepType >
-  DefaultInterpolatorType;
-
-  /** Get/Set the interpolator function. */
-  itkSetObjectMacro(Interpolator, InterpolatorType);
-  itkGetModifiableObjectMacro(Interpolator, InterpolatorType);
-
   /** The type of the expand factors representation */
   typedef FixedArray< unsigned int, ImageDimension > ExpandFactorsType;
 
@@ -163,7 +151,6 @@ private:
   void operator=(const Self &) ITK_DELETE_FUNCTION;
 
   ExpandFactorsType   m_ExpandFactors;
-  InterpolatorPointer m_Interpolator;
 };
 } // end namespace itk
 
