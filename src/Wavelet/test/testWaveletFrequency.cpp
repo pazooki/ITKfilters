@@ -6,7 +6,6 @@
 #include "itkImage.h"
 #include "itkImageFileReader.h"
 #include "itkWaveletFrequencyForward.h"
-// #include "itkInverseWaveletFFT.h"
 #include "itkWaveletFrequencyFilterBankGenerator.h"
 #include "itkHeldWavelet.h"
 #include "itkVowWavelet.h"
@@ -14,7 +13,6 @@
 #include "itkInverseFFTImageFilter.h"
 #include "visualize_functions.h"
 #include <itkComplexToRealImageFilter.h>
-// #include "itkWaveletFT.h"
 using namespace std;
 using namespace itk;
 
