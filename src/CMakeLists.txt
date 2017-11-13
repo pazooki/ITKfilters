@@ -42,7 +42,6 @@ add_subdirectory(main)
 add_subdirectory(Denoise)
 add_subdirectory(Skeleton)
 add_subdirectory(Quadrature)
-add_subdirectory(Wavelet)
 include_directories(ObjectList)
 set(ENABLE_PARALLEL "ON" CACHE BOOL "Enable to use openMP")
 ################ GTEST ################
