@@ -15,8 +15,8 @@
  *  limitations under the License.
  *
  *=========================================================================*/
-#ifndef itkRieszImageFilter_hxx
-#define itkRieszImageFilter_hxx
+#ifndef itkMonogenicPhaseAnalysisFrequencyImageFilter_hxx
+#define itkMonogenicPhaseAnalysisFrequencyImageFilter_hxx
 #include "visualize_functions.h" // TODO REMOVE
 #include <array>
 #include <itkSubtractImageFilter.h>
@@ -24,7 +24,7 @@
 #include "itkImageRegionConstIterator.h"
 #include "itkImageRegionIterator.h"
 #include "itkImageIterator.h"
-#include "itkRieszImageFilter.h"
+#include "itkMonogenicPhaseAnalysisFrequencyImageFilter.h"
 #include <itkComposeImageFilter.h>
 #include <itkVectorIndexSelectionCastImageFilter.h>
 #include <itkVectorImageToImageAdaptor.h>
@@ -46,71 +46,60 @@
 #include <itkMatrix.h>
 #include <itkSymmetricEigenAnalysis.h>
 
+#include "itkRieszFrequencyFunction.h"
 namespace itk
 {
-template< typename TInputImage >
-RieszImageFilter< TInputImage >
-::RieszImageFilter()
+template< typename TInputImage
+          typename TFrequencyRegionIterator>
+MonogenicPhaseAnalysisFrequencyImageFilter<TInputImage, TFrequencyRegionIterator>
+::MonogenicPhaseAnalysisFrequencyImageFilter()
 {
-  this->SetNumberOfRequiredOutputs(4);
   this->SetNumberOfRequiredInputs(1);
+  this->SetNumberOfRequiredOutputs(1);
+}
 
-  this->SetNthOutput( 0, this->MakeOutput(0) );
-  this->SetNthOutput( 1, this->MakeOutput(1) );
-  this->SetNthOutput( 2, this->MakeOutput(2) );
-  this->SetNthOutput( 3, this->MakeOutput(3) );
+template< typename TInputImage
+          typename TFrequencyRegionIterator>
+MonogenicPhaseAnalysisFrequencyImageFilter<TInputImage, TFrequencyRegionIterator>
+::GenerateOutputInformation(void)
+{
+  this->Superclass::GenerateOutputInformation();
 
-  this->m_SigmaGaussianDerivative = 1.0;
-  this->m_StatisticsMean = 0.0;
+  OutputImageType *output = this->GetOutput();
+  output->SetNumberOfComponentsPerPixel( ImageDimension );
 }
 
 template< typename TInputImage >
 void
-RieszImageFilter< TInputImage >
-::GenerateData()
+MonogenicPhaseAnalysisFrequencyImageFilter< TInputImage >
+::ThreadedGenerateData(const typename TInputImage::RegionType & outputRegionForThread,
+                       ThreadIdType threadId)
 {
-
-  typename StatisticsImageFilterType::Pointer statisticsImageFilter
-          = StatisticsImageFilterType::New ();
-  statisticsImageFilter->SetInput(this->GetInput());
-  statisticsImageFilter->Update();
-  this->m_StatisticsMean = statisticsImageFilter->GetMean();
+  // Allocate the outputs
+  this->AllocateOutputs();
   // Create a process accumulator for tracking the progress of this minipipeline
   ProgressAccumulator::Pointer progress = ProgressAccumulator::New();
   progress->SetMiniPipelineFilter(this);
-  // Allocate the outputs
-  InputImageType* evenPart = this->GetOutputReal();
-  evenPart->SetRegions( evenPart->GetLargestPossibleRegion() );
-  evenPart->Allocate();
-  RieszComponentsImageType* rieszComponents = this->GetOutputRieszComponents();
-  rieszComponents->SetRegions( rieszComponents->GetRequestedRegion() );
-  rieszComponents->Allocate();
-  InputImageType* normPart = this->GetOutputRieszNorm();
-  normPart->SetRegions( normPart->GetRequestedRegion() );
-  normPart->Allocate();
 
-  //Substract Mean value of image to every pixel to remove DC comp
-  typedef itk::SubtractImageFilter<InputImageType> SubtractFilterType;
-  typename SubtractFilterType::Pointer subtractFilter =
-    SubtractFilterType::New();
-  subtractFilter->SetInput(this->GetInput());
-  subtractFilter->SetConstant(this->m_StatisticsMean);
-  subtractFilter->Update();
+  typename OutputImageType::Pointer outputPtr = this->GetOutput();
 
-  typename FFTFilterType::Pointer fftFilter = FFTFilterType::New();
-  // fftFilter->SetInput( this->GetInput() );
-  fftFilter->SetInput( subtractFilter->GetOutput());
-  progress->RegisterInternalFilter(fftFilter, 1.0f);
-  fftFilter->Update();
-  std::cout << fftFilter->GetOutput()->GetBufferedRegion() << std::endl;
-  typename ComplexImageType::Pointer fftForward = this->GetOutputFFT();
-  fftForward->SetRegions(fftFilter->GetOutput()->GetRequestedRegion());
-  fftForward->Allocate();
-  // fftForward = fftFilter->GetOutput();
-  ImageAlgorithm::Copy(fftFilter->GetOutput(), fftForward.GetPointer(),
-      fftFilter->GetOutput()->GetRequestedRegion(), fftFilter->GetOutput()->GetRequestedRegion());
+  typedef itk::RieszFrequencyFunction<FloatType, ImageDimension> RieszFunctionType;
+  typename RieszFunctionType::Pointer evaluator = RieszFunctionType::New();
 
-  // this->PrintSelf(std::cout,2);
+  OutputFrequencyRegionIterator frequencyIt(outputPtr, outputRegionForThread);
+  for (frequencyIt.GoToBegin(); !frequencyIt.IsAtEnd(); ++frequencyIt)
+    {
+    typename RieszFunctionType::OutputArrayType evaluatedArray =
+      evaluator->EvaluateArray(frequencyIt.GetFrequencyIndex());
+    typename OutputImageType::PixelType value = frequencyIt.Get();
+    for (unsigned int dir = 0; dir < ImageDimension; ++dir)
+      {
+      // This is a complex number multiplication.
+      value[dir] *= evaluatedArray[dir];
+      }
+    frequencyIt.Set(value) ;
+    ++frequencyIt[dir];
+    }
 
   std::cout << "RealComponent" << std::endl;
   InputImagePointer realC = this->ComputeRealComponent(fftForward);
@@ -126,238 +115,12 @@ RieszImageFilter< TInputImage >
   std::cout << "End GenerateData" << std::endl;
 }
 
+
+// This does sqrt(M_0^2 + M_R^2)
+// where M_R is the norm of the Riesz Vector.
 template< typename TInputImage>
-typename TInputImage::Pointer
-RieszImageFilter<TInputImage>
-::ComputeRealComponent(const ComplexImageType* fftForward ) const
-{
-  SizeType inputSizeSquare    =
-    fftForward->GetLargestPossibleRegion().GetSize() *
-    fftForward->GetLargestPossibleRegion().GetSize();
-  // Spacing is a vector, and * perform inner product.
-  SpacingType inputSpacingSquare = fftForward->GetSpacing();
-  for (unsigned int i = 0; i < ImageDimension ; i++)
-    inputSpacingSquare[i] *= inputSpacingSquare[i];
-
-  typedef itk::ImageDuplicator< ComplexImageType > DuplicatorType;
-  typename DuplicatorType::Pointer duplicator= DuplicatorType::New();
-  duplicator->SetInputImage(fftForward);
-  duplicator->Update();
-  typename ComplexImageType::Pointer intermediatePtr =
-    duplicator->GetModifiableOutput();
-  intermediatePtr->DisconnectPipeline();
-  ImageRegionIteratorWithIndex< ComplexImageType >
-  outIt(intermediatePtr, intermediatePtr->GetRequestedRegion() );
-  for ( outIt.GoToBegin() ; !outIt.IsAtEnd(); ++outIt )
-    {
-    const typename ComplexImageType::IndexType index = outIt.GetIndex();
-    typename ComplexImageType::PointType evalPoint; // w = (u,v,..);
-    intermediatePtr->TransformIndexToPhysicalPoint(index, evalPoint);
-    RealType w2 = 0;
-    for (unsigned int i = 0; i < ImageDimension ; i++)
-      w2 += ( inputSpacingSquare[i] /
-              static_cast<RealType>(inputSizeSquare[i])) *
-              evalPoint[i] * evalPoint[i];
-    const InputImagePixelType w_mod = sqrt( w2 );
-
-    const ComplexImagePixelType value =
-      outIt.Get() *
-      w_mod *
-      std::exp(- this->m_SigmaGaussianDerivative *
-                 this->m_SigmaGaussianDerivative *
-                 w2
-              ) ;
-
-    outIt.Set( value );
-    }
-  intermediatePtr->Modified();
-
-  typename InverseFFTFilterType::Pointer inverseFilter =
-    InverseFFTFilterType::New();
-  inverseFilter->SetInput( intermediatePtr );
-  inverseFilter->Update();
-  typename InputImageType::Pointer output = inverseFilter->GetOutput();
-  output->DisconnectPipeline();
-  std::cout << output->GetBufferedRegion() << std::endl;
-  return output;
-
-}
-
-template< typename TInputImage>
-typename RieszImageFilter<TInputImage>::InputImageType::Pointer
-RieszImageFilter<TInputImage>
-::ComputeRieszComponent(
-    const ComplexImageType* fftForward,
-    const unsigned int & NComponent) const
-{
-  SizeType inputSizeSquare    =
-    fftForward->GetBufferedRegion().GetSize() *
-    fftForward->GetBufferedRegion().GetSize();
-  // Spacing is a vector, and * perform inner product.
-  SpacingType inputSpacingSquare = fftForward->GetSpacing();
-  for (unsigned int i = 0; i < ImageDimension ; i++)
-    inputSpacingSquare[i] *= inputSpacingSquare[i];
-
-  typedef itk::ImageDuplicator< ComplexImageType > DuplicatorType;
-  typename DuplicatorType::Pointer duplicator = DuplicatorType::New();
-  duplicator->SetInputImage(fftForward);
-  duplicator->Update();
-  typename ComplexImageType::Pointer componentImage = duplicator->GetOutput();
-  componentImage->DisconnectPipeline();
-
-  ImageRegionIteratorWithIndex< ComplexImageType >
-    outIt( componentImage, componentImage->GetBufferedRegion() );
-  for ( outIt.GoToBegin() ; !outIt.IsAtEnd(); ++outIt )
-  {
-    const typename ComplexImageType::IndexType index = outIt.GetIndex();
-    typename ComplexImageType::PointType evalPoint; // w = (u,v,..);
-    componentImage->TransformIndexToPhysicalPoint(index, evalPoint);
-    RealType w2 = 0;
-    for (unsigned int i = 0; i < ImageDimension ; i++)
-      w2 += ( inputSpacingSquare[i] /
-              static_cast<RealType>(inputSizeSquare[i])) *
-              evalPoint[i] * evalPoint[i];
-    const InputImagePixelType gaussian_exp = std::exp( -w2 *
-      this->m_SigmaGaussianDerivative * this->m_SigmaGaussianDerivative);
-    const ComplexImagePixelType riesz_gaussian_derivative_comp =
-      std::complex<InputImagePixelType>(
-           sqrt(w2) * gaussian_exp, // real
-           - gaussian_exp *
-           static_cast<InputImagePixelType>(evalPoint[NComponent])
-           );
-    const ComplexImagePixelType out_value =
-      outIt.Get() * // complex
-      riesz_gaussian_derivative_comp; // complex
-    // std::cout <<"Index: "<< index << " ; outIt.Get(): " << outIt.Get() << std::endl;
-    // std::cout <<"wmod: " << w_mod  <<" ; out1: real: " << value.real() << " ccomplex:" << value.imag() <<  std::endl;
-    outIt.Set( out_value );
-  }
-  componentImage->Modified();
-
-  typename InverseFFTFilterType::Pointer inverseFilter =
-    InverseFFTFilterType::New();
-  inverseFilter->SetInput( componentImage );
-  inverseFilter->Update();
-  typename InputImageType::Pointer output = inverseFilter->GetOutput();
-  output->DisconnectPipeline();
-  return output;
-}
-
-template< typename TInputImage>
-typename RieszImageFilter<TInputImage>::RieszComponentsImageType::Pointer
-RieszImageFilter<TInputImage>
-::ComputeRieszComponents(const ComplexImageType* fftForward) const
-{
-  typedef itk::ComposeImageFilter<InputImageType> ComposerType;
-  typename ComposerType::Pointer composer= ComposerType::New();
-  for(unsigned int N = 0 ; N < ImageDimension ; ++N)
-    composer->SetInput(N, ComputeRieszComponent(fftForward, N));
-  composer->Update();
-
-  typename RieszComponentsImageType::Pointer output = composer->GetOutput();
-  output->DisconnectPipeline();
-  return output;
-}
-
-template< typename TInputImage>
-typename RieszImageFilter<TInputImage>::InputImageType::Pointer
-RieszImageFilter<TInputImage>
-::ComputeRieszComponentConvolvedWithFunction(
-        std::function<InputImagePixelType(
-          typename InputImageType::PointType)> function_in_freq, // PointType because wavelet must be isotropic (depends on w_vector, not w_component)
-        const ComplexImageType* fftForward,
-        const unsigned int & NComponent) const
-{
-
-  // Divergence of riesz components in freq zero:
-  // Solved substrating StatisticsMean to each pixel (DC component is zero)
-  typename ComplexImageType::IndexType zero_index;
-  SizeType inputSizeSquare    =
-    fftForward->GetBufferedRegion().GetSize() *
-    fftForward->GetBufferedRegion().GetSize();
-  // Spacing is a vector, and * perform inner product.
-  SpacingType inputSpacingSquare = fftForward->GetSpacing();
-  for (unsigned int i = 0; i < ImageDimension ; i++)
-    {
-    inputSpacingSquare[i] *= inputSpacingSquare[i];
-    zero_index[i] = 0;
-    }
-
-  typedef itk::ImageDuplicator< ComplexImageType > DuplicatorType;
-  typename DuplicatorType::Pointer duplicator = DuplicatorType::New();
-  duplicator->SetInputImage(fftForward);
-  duplicator->Update();
-  typename ComplexImageType::Pointer componentImage = duplicator->GetOutput();
-  componentImage->DisconnectPipeline();
-
-  ImageRegionIteratorWithIndex< ComplexImageType >
-    outIt( componentImage, componentImage->GetBufferedRegion() );
-  for ( outIt.GoToBegin() ; !outIt.IsAtEnd(); ++outIt )
-  {
-    ComplexImagePixelType out_value =
-      itk::NumericTraits<ComplexImagePixelType>::Zero;
-    const typename ComplexImageType::IndexType index = outIt.GetIndex();
-    if (index == zero_index)
-      {
-      outIt.Set(out_value); // Zero
-      continue;
-      }
-    typename ComplexImageType::PointType evalPoint; // w = (u,v,..);
-    componentImage->TransformIndexToPhysicalPoint(index, evalPoint);
-    RealType w2 = 0;
-    for (unsigned int i = 0; i < ImageDimension ; i++)
-      w2 += ( inputSpacingSquare[i] /
-             static_cast<RealType>(inputSizeSquare[i])) *
-             evalPoint[i] * evalPoint[i];
-    const InputImagePixelType w_mod = sqrt( w2 );
-    const ComplexImagePixelType riesz_comp =
-      std::complex<InputImagePixelType>(
-           0,
-           - static_cast<InputImagePixelType>(evalPoint[NComponent]) / w_mod
-           );
-    out_value =
-      outIt.Get() * // complex number
-      function_in_freq(evalPoint) * // scalar
-      riesz_comp;
-//     std::cout <<"Index: "<< index << " ; outIt.Get(): " << outIt.Get() <<
-// " wmod: " << w_mod  <<" ; out1: real: " << out_value.real() << " ccomplex:" << out_value.imag() <<  std::endl;
-    outIt.Set( out_value );
-  }
-  componentImage->Modified();
-
-  typename InverseFFTFilterType::Pointer inverseFilter =
-    InverseFFTFilterType::New();
-  inverseFilter->SetInput( componentImage );
-  inverseFilter->Update();
-  typename InputImageType::Pointer output = inverseFilter->GetOutput();
-  output->DisconnectPipeline();
-  return output;
-}
-
-template< typename TInputImage>
-typename RieszImageFilter<TInputImage>::RieszComponentsImageType::Pointer
-RieszImageFilter<TInputImage>
-::ComputeRieszComponentsWithFunction(
-    std::function<InputImagePixelType(
-      typename InputImageType::PointType)> function_in_freq, // PointType because wavelet must be isotropic (depends on w_vector, not w_component)
-    const ComplexImageType* fftForward) const
-{
-  typedef itk::ComposeImageFilter<InputImageType> ComposerType;
-  typename ComposerType::Pointer composer= ComposerType::New();
-  for(unsigned int N = 0 ; N < ImageDimension ; ++N)
-    composer->SetInput(N,
-        ComputeRieszComponentConvolvedWithFunction(
-          function_in_freq, fftForward, N));
-  composer->Update();
-
-  typename RieszComponentsImageType::Pointer output = composer->GetOutput();
-  output->DisconnectPipeline();
-  return output;
-}
-
-template< typename TInputImage>
-typename RieszImageFilter<TInputImage>::InputImageType::Pointer
-RieszImageFilter<TInputImage>
+typename MonogenicPhaseAnalysisFrequencyImageFilter<TInputImage>::InputImageType::Pointer
+MonogenicPhaseAnalysisFrequencyImageFilter<TInputImage>
 ::ComputeLocalAmplitude(
     const InputImageType* real_part,
     const InputImageType* riesz_norm_part) const
@@ -386,8 +149,8 @@ RieszImageFilter<TInputImage>
 }
 
 template< typename TInputImage>
-typename RieszImageFilter<TInputImage>::InputImageType::Pointer
-RieszImageFilter<TInputImage>
+typename MonogenicPhaseAnalysisFrequencyImageFilter<TInputImage>::InputImageType::Pointer
+MonogenicPhaseAnalysisFrequencyImageFilter<TInputImage>
 ::ComputeRieszWeightedNorm(
     const RieszComponentsImageType* rieszComponents,
     const DirectionType & weights) const
@@ -438,8 +201,8 @@ RieszImageFilter<TInputImage>
 }
 
 template< typename TInputImage>
-typename RieszImageFilter<TInputImage>::InputImageType::Pointer
-RieszImageFilter<TInputImage>
+typename MonogenicPhaseAnalysisFrequencyImageFilter<TInputImage>::InputImageType::Pointer
+MonogenicPhaseAnalysisFrequencyImageFilter<TInputImage>
 ::ComputeRieszNorm(const RieszComponentsImageType* rieszComponents) const
 {
   DirectionType weights;
@@ -449,8 +212,8 @@ RieszImageFilter<TInputImage>
 }
 
 template< typename TInputImage>
-typename RieszImageFilter<TInputImage>::InputImageType::Pointer
-RieszImageFilter<TInputImage>
+typename MonogenicPhaseAnalysisFrequencyImageFilter<TInputImage>::InputImageType::Pointer
+MonogenicPhaseAnalysisFrequencyImageFilter<TInputImage>
 ::ComputeRieszWeightedNormByEigenValues(
     const RieszComponentsImageType* rieszComponents,
     const typename EigenValuesImageType::Pointer eigenValues) const
@@ -503,9 +266,9 @@ RieszImageFilter<TInputImage>
 }
 template< typename TInputImage>
 std::pair<
-  typename RieszImageFilter<TInputImage>::EigenVectorsImageType::Pointer,
-  typename RieszImageFilter<TInputImage>::EigenValuesImageType::Pointer >
-RieszImageFilter<TInputImage>
+  typename MonogenicPhaseAnalysisFrequencyImageFilter<TInputImage>::EigenVectorsImageType::Pointer,
+  typename MonogenicPhaseAnalysisFrequencyImageFilter<TInputImage>::EigenValuesImageType::Pointer >
+MonogenicPhaseAnalysisFrequencyImageFilter<TInputImage>
 ::ComputeEigenAnalysisMaximizingRieszComponents(
     const unsigned int & gaussian_window_radius,
     const float & gaussian_window_sigma,
@@ -627,8 +390,8 @@ RieszImageFilter<TInputImage>
 }
 
 template< typename TInputImage>
-typename RieszImageFilter<TInputImage>::RieszComponentsImageType::Pointer
-RieszImageFilter<TInputImage>
+typename MonogenicPhaseAnalysisFrequencyImageFilter<TInputImage>::RieszComponentsImageType::Pointer
+MonogenicPhaseAnalysisFrequencyImageFilter<TInputImage>
 ::ComputeRieszComponentsWithMaximumResponse(
     const typename EigenVectorsImageType::Pointer eigenVectors,
     const RieszComponentsImageType* rieszComponents ) const
@@ -667,7 +430,7 @@ RieszImageFilter<TInputImage>
 
 template< typename TInputImage>
 typename TInputImage::Pointer
-RieszImageFilter<TInputImage>
+MonogenicPhaseAnalysisFrequencyImageFilter<TInputImage>
 ::ComputeLocalPhaseInDirection(
     const DirectionType & unitary_direction,
     const InputImageType* rieszReal,
@@ -694,16 +457,24 @@ RieszImageFilter<TInputImage>
 
 template< typename TInputImage>
 typename TInputImage::Pointer
-RieszImageFilter<TInputImage>
-::ComputeRieszProjection(const DirectionType & unitary_direction,
-    const RieszComponentsImageType* rieszComponents) const
+MonogenicPhaseAnalysisFrequencyImageFilter<TInputImage>
+::ComputeRieszProjection(const DirectionType & unitary_direction) const
+    // const RieszComponentsImageType* rieszComponents) const
 {
+  OutputImageConstPointer rieszComponents = this->GetOutput();
+
   typedef itk::ImageDuplicator< InputImageType > DuplicatorType;
   typename DuplicatorType::Pointer duplicator= DuplicatorType::New();
   duplicator->SetInputImage(this->GetInput());
   duplicator->Update();
   typename InputImageType::Pointer output = duplicator->GetModifiableOutput();
+  OutputImageRegionConstIterator outIt(this->GetOutput(), this->GetOutput()->GetLargestPossibleRegion());
 
+  for (outIt.GoToBegin(); !outIt.IsAtEnd(); ++outIt)
+    {
+    // TODO AQUI TAS QUEDAO BRO
+
+    }
   typedef VectorIndexSelectionCastImageFilter<RieszComponentsImageType,
           InputImageType> CastIndexType;
   typename CastIndexType::Pointer castIndex = CastIndexType::New();
@@ -732,11 +503,10 @@ RieszImageFilter<TInputImage>
     output->DisconnectPipeline();
   }
   return output;
-
 }
 template< typename TInputImage>
-typename RieszImageFilter<TInputImage>::RealType
-RieszImageFilter<TInputImage>
+typename MonogenicPhaseAnalysisFrequencyImageFilter<TInputImage>::RealType
+MonogenicPhaseAnalysisFrequencyImageFilter<TInputImage>
 ::ComputeLocalRieszProjection(
     const DirectionType & direction,
     const ImageConstIterator<RieszComponentsImageType> & rieszIt ) const
@@ -749,7 +519,7 @@ RieszImageFilter<TInputImage>
 
 template< typename TInputImage >
 void
-RieszImageFilter< TInputImage >
+MonogenicPhaseAnalysisFrequencyImageFilter< TInputImage >
 ::PrintSelf(std::ostream & os, Indent indent) const
 {
   Superclass::PrintSelf(os, indent);
@@ -758,37 +528,38 @@ RieszImageFilter< TInputImage >
      << std::endl;
 }
 
-template< typename TInputImage>
-DataObject::Pointer RieszImageFilter<TInputImage>
-::MakeOutput(DataObjectPointerArraySizeType idx)
-{
-  DataObject::Pointer output;
-
-  switch ( idx )
-    {
-    case 0:
-      output = ( InputImageType::New() ).GetPointer();
-      break;
-    case 1:
-      output = ( RieszComponentsImageType::New() ).GetPointer();
-      break;
-    case 2:
-      output = ( InputImageType::New() ).GetPointer();
-      break;
-    case 3:
-      output = ( ComplexImageType::New() ).GetPointer();
-      break;
-    default:
-      std::cerr << "No output " << idx << std::endl;
-      output = NULL;
-      break;
-    }
-  return output.GetPointer();
-}
+// Outputs of different types!
+// template< typename TInputImage>
+// DataObject::Pointer MonogenicPhaseAnalysisFrequencyImageFilter<TInputImage>
+// ::MakeOutput(DataObjectPointerArraySizeType idx)
+// {
+//   DataObject::Pointer output;
+//
+//   switch ( idx )
+//     {
+//     case 0:
+//       output = ( InputImageType::New() ).GetPointer();
+//       break;
+//     case 1:
+//       output = ( RieszComponentsImageType::New() ).GetPointer();
+//       break;
+//     case 2:
+//       output = ( InputImageType::New() ).GetPointer();
+//       break;
+//     case 3:
+//       output = ( ComplexImageType::New() ).GetPointer();
+//       break;
+//     default:
+//       std::cerr << "No output " << idx << std::endl;
+//       output = NULL;
+//       break;
+//     }
+//   return output.GetPointer();
+// }
 
 template< class TInputImage>
 TInputImage*
-RieszImageFilter<TInputImage>
+MonogenicPhaseAnalysisFrequencyImageFilter<TInputImage>
 ::GetOutputReal()
 {
   return dynamic_cast< TInputImage * >(
@@ -796,8 +567,8 @@ RieszImageFilter<TInputImage>
 }
 
 template< class TInputImage>
-typename RieszImageFilter<TInputImage>::RieszComponentsImageType*
-RieszImageFilter<TInputImage>
+typename MonogenicPhaseAnalysisFrequencyImageFilter<TInputImage>::RieszComponentsImageType*
+MonogenicPhaseAnalysisFrequencyImageFilter<TInputImage>
 ::GetOutputRieszComponents()
 {
   return dynamic_cast< RieszComponentsImageType * >(
@@ -806,7 +577,7 @@ RieszImageFilter<TInputImage>
 
 template< class TInputImage>
 TInputImage*
-RieszImageFilter<TInputImage>
+MonogenicPhaseAnalysisFrequencyImageFilter<TInputImage>
 ::GetOutputRieszNorm()
 {
   return dynamic_cast< TInputImage * >(
@@ -814,8 +585,8 @@ RieszImageFilter<TInputImage>
 }
 
 template< class TInputImage>
-typename RieszImageFilter<TInputImage>::ComplexImageType*
-RieszImageFilter<TInputImage>
+typename MonogenicPhaseAnalysisFrequencyImageFilter<TInputImage>::ComplexImageType*
+MonogenicPhaseAnalysisFrequencyImageFilter<TInputImage>
 ::GetOutputFFT()
 {
   return dynamic_cast< ComplexImageType * >(
