@@ -1,4 +1,7 @@
 scripts-python/results/
+scripts-python/pectin/
+scripts-python/input/
+scripts-python/prueba/
 #PYTHON gitignore.
 # Byte-compiled / optimized / DLL files
 __pycache__/
