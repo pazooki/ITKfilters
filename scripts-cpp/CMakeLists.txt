@@ -4,20 +4,12 @@ cmake_policy(SET CMP0012 NEW) # TO avoid ipcv lib error
 project(ITKfilters_scripts)
 
 # Following: https://discourse.itk.org/t/find-all-available-modules-from-groupio/351/5
-find_package(ITK CONFIG REQUIRED)
+# Since ITK4.13, ITKImageIO
 set(use_itk_modules
     IsotropicWavelets
     ITKVtkGlue
-    ITKIOImageBase
-    ITKIOPNG ITKIOJPEG
-    ITKIOTIFF
-    ITKIONRRD
+    ITKImageIO
     )
-# foreach( mod IN LISTS ITK_MODULES_ENABLED)
-#   if( ${mod} MATCHES "IO")
-#     list(APPEND use_itk_modules ${mod})
-#   endif()
-# endforeach()
 find_package(ITK COMPONENTS ${use_itk_modules} REQUIRED)
 include(${ITK_USE_FILE})
 message(status "** ITK Libraries:  ${ITK_LIBRARIES}")

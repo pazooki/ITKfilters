@@ -18,6 +18,7 @@
 
 #include "itkForwardFFTImageFilter.h"
 #include "itkInverseFFTImageFilter.h"
+#include "itkWaveletUtilities.h"
 #include "itkWaveletFrequencyForward.h"
 #include "itkWaveletFrequencyInverse.h"
 #include "itkWaveletFrequencyForwardUndecimated.h"
@@ -35,6 +36,7 @@
 
 #include "itkImage.h"
 #include "itkImageFileReader.h"
+#include "itkTIFFImageIO.h"
 #include "itkImageFileWriter.h"
 #include "itkCastImageFilter.h"
 #include "itkNumberToString.h"
@@ -67,7 +69,7 @@ template< unsigned int VDimension, typename TWaveletFunction >
 int
 runRieszWaveletPhaseAnalysisTest( const std::string& inputImage,
   const std::string & outputImage,
-  const unsigned int& inputLevels,
+  const std::string& inputLevels,
   const unsigned int& inputBands,
   const bool applySoftThreshold,
   const bool visualize,
@@ -83,6 +85,11 @@ runRieszWaveletPhaseAnalysisTest( const std::string& inputImage,
   itk::NumberToString< unsigned int > n2s;
   typename ReaderType::Pointer reader = ReaderType::New();
   reader->SetFileName( inputImage );
+  // Defense against dodgy tiff images (wrong metadata)
+  // Read incorrectly with SCIFIO module.
+  itk::TIFFImageIO::Pointer tiffIO = itk::TIFFImageIO::New();
+  if(tiffIO->CanReadFile(inputImage.c_str()))
+    reader->SetImageIO( tiffIO );
   reader->Update();
 
   typedef itk::ZeroDCImageFilter< ImageType > ZeroDCFilterType;
@@ -107,8 +114,15 @@ runRieszWaveletPhaseAnalysisTest( const std::string& inputImage,
   typedef itk::WaveletFrequencyForward< ComplexImageType, ComplexImageType, WaveletFilterBankType > ForwardWaveletType;
   // typedef itk::WaveletFrequencyForwardUndecimated< ComplexImageType, ComplexImageType, WaveletFilterBankType > ForwardWaveletType;
   typename ForwardWaveletType::Pointer forwardWavelet = ForwardWaveletType::New();
+
+  unsigned int levels = 0;
+  if(inputLevels == "max"){
+    levels = ForwardWaveletType::ComputeMaxNumberOfLevels(reader->GetOutput()->GetLargestPossibleRegion().GetSize(), forwardWavelet->GetScaleFactor() );
+    std::cout << "maxLevels = " << levels << std::endl;
+  } else {
+    levels = std::stoul(inputLevels, nullptr, 0);
+  }
   unsigned int highSubBands = inputBands;
-  unsigned int levels = inputLevels;
   forwardWavelet->SetHighPassSubBands( highSubBands );
   forwardWavelet->SetLevels( levels );
   forwardWavelet->SetInput( fftForwardFilter->GetOutput() );
@@ -214,7 +228,7 @@ runRieszWaveletPhaseAnalysisTest( const std::string& inputImage,
   // typedef itk::ImageFileWriter< typename InverseFFTFilterType::OutputImageType > WriterType;
   typedef itk::ImageFileWriter< ImageFloatType > WriterType;
   typename WriterType::Pointer writer = WriterType::New();
-  std::string appendString = "_L" + n2s(inputLevels) + "_B" + n2s(inputBands) + "_S" + n2s(thresholdNumOfSigmas);
+  std::string appendString = "_L" + n2s(levels) + "_B" + n2s(inputBands) + "_S" + n2s(thresholdNumOfSigmas);
   std::string outputFile = AppendToFilenameRiesz(outputImage, appendString);
   writer->SetFileName( outputFile );
   writer->SetInput( caster->GetOutput() );
@@ -231,7 +245,7 @@ int main( int argc, char *argv[] )
     ( "help,h", "display this message." )
     ( "input,i", po::value<std::string>()->required(), "Input image." )
     ( "output,o", po::value<std::string>()->required(), "Output path. More images will be generated based on this name. Include extension (.nrrd recommended)." )
-    ( "levels,l", po::value<unsigned int>()->required(), "Number of Levels for the wavelet decomposition." )
+    ( "levels,l", po::value<std::string>()->required(), "Number of Levels for the wavelet decomposition. Allowed: positive digit or max" )
     ( "bands,b", po::value<unsigned int>()->required(), "Number of Bands for the wavelet decomposition." )
     ( "wavelet,w", po::value<std::string>()->default_value("Held"), "Type of Wavelet: Valid: Held, Simoncelli, Vow, Shannon." )
     ( "dimension,d", po::value<unsigned int>()->required(), "Dimension of the image: 2 or 3" )
@@ -256,7 +270,7 @@ int main( int argc, char *argv[] )
 
   const std::string inputImage = vm["input"].as<std::string>();
   const std::string outputImage = vm["output"].as<std::string>();
-  const unsigned int inputLevels = vm["levels"].as<unsigned int>();
+  const std::string inputLevels = vm["levels"].as<std::string>();
   const unsigned int inputBands = vm["bands"].as<unsigned int>();
   const std::string waveletFunction = vm["wavelet"].as<std::string>();
   const unsigned int dimension = vm["dimension"].as<unsigned int>();
@@ -278,9 +292,6 @@ int main( int argc, char *argv[] )
     {
     const unsigned int ImageDimension = 2;
     typedef itk::Point< PixelType, ImageDimension >        PointType;
-
-    if(verbose)
-      std::cout << "dimension:" << ImageDimension << std::endl;
 
     typedef itk::HeldIsotropicWavelet< PixelType, ImageDimension, PointType >
       HeldIsotropicWaveletType;
@@ -341,8 +352,6 @@ int main( int argc, char *argv[] )
     {
     const unsigned int ImageDimension = 3;
     typedef itk::Point< PixelType, ImageDimension >        PointType;
-    if(verbose)
-      std::cout << "dimension:" << ImageDimension << std::endl;
 
     typedef itk::HeldIsotropicWavelet< PixelType, ImageDimension, PointType >
       HeldIsotropicWaveletType;
