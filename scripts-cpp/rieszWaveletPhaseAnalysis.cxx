@@ -48,6 +48,9 @@
 #include <boost/program_options/parsers.hpp>
 #include <boost/program_options/variables_map.hpp>
 namespace po = boost::program_options;
+// boost::filesystem
+#include <boost/filesystem.hpp>
+namespace fs = boost::filesystem;
 
 // Visualize for dev/debug purposes. Set in cmake file. Requires VTK
 #include "itkViewImage.h"
@@ -244,7 +247,8 @@ int main( int argc, char *argv[] )
   general_opt.add_options()
     ( "help,h", "display this message." )
     ( "input,i", po::value<std::string>()->required(), "Input image." )
-    ( "output,o", po::value<std::string>()->required(), "Output path. More images will be generated based on this name. Include extension (.nrrd recommended)." )
+    ( "outputFolder,o", po::value<std::string>()->required(), "Outputfolder path. A number of images will be generated depending on levels and bands." )
+    ( "outputExtension,e", po::value<std::string>()->default_value("nrrd"), "Output extension." )
     ( "levels,l", po::value<std::string>()->required(), "Number of Levels for the wavelet decomposition. Allowed: positive digit or max" )
     ( "bands,b", po::value<unsigned int>()->required(), "Number of Bands for the wavelet decomposition." )
     ( "wavelet,w", po::value<std::string>()->default_value("Held"), "Type of Wavelet: Valid: Held, Simoncelli, Vow, Shannon." )
@@ -269,7 +273,11 @@ int main( int argc, char *argv[] )
   }
 
   const std::string inputImage = vm["input"].as<std::string>();
-  const std::string outputImage = vm["output"].as<std::string>();
+  const std::string outputFolder = vm["outputFolder"].as<std::string>();
+  const std::string outputExtension = vm["outputExtension"].as<std::string>();
+  const fs::path inputImageStem_path = fs::path(inputImage).stem();
+  const fs::path outputFolder_path = fs::absolute(fs::path(outputFolder));
+  const std::string outputImage = (outputFolder_path / fs::path(inputImageStem_path.string() + "." + outputExtension)).string();
   const std::string inputLevels = vm["levels"].as<std::string>();
   const unsigned int inputBands = vm["bands"].as<unsigned int>();
   const std::string waveletFunction = vm["wavelet"].as<std::string>();
