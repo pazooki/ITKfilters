@@ -79,7 +79,6 @@ runRieszWaveletPhaseAnalysisTest( const std::string& inputImage,
   const double thresholdNumOfSigmas = 2.0)
 {
   const unsigned int Dimension = VDimension;
-  std::cout << "Dimension in run: " << Dimension << std::endl;
 
   typedef double                             PixelType;
   typedef itk::Image< PixelType, Dimension > ImageType;
@@ -231,7 +230,9 @@ runRieszWaveletPhaseAnalysisTest( const std::string& inputImage,
   // typedef itk::ImageFileWriter< typename InverseFFTFilterType::OutputImageType > WriterType;
   typedef itk::ImageFileWriter< ImageFloatType > WriterType;
   typename WriterType::Pointer writer = WriterType::New();
-  std::string appendString = "_L" + n2s(levels) + "_B" + n2s(inputBands) + "_S" + n2s(thresholdNumOfSigmas);
+  std::string appendString = "_L" + n2s(levels) + "_B" + n2s(inputBands);
+  if(applySoftThreshold)
+    appendString += "_ApplyS" + n2s(thresholdNumOfSigmas);
   std::string outputFile = AppendToFilenameRiesz(outputImage, appendString);
   writer->SetFileName( outputFile );
   writer->SetInput( caster->GetOutput() );
