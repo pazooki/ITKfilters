@@ -29,3 +29,6 @@ include_directories("./include")
 
 add_executable(rieszWaveletPhaseAnalysis rieszWaveletPhaseAnalysis.cxx)
 target_link_libraries(rieszWaveletPhaseAnalysis ${Boost_LIBRARIES} ${ITK_LIBRARIES} ${VTK_LIBRARIES})
+
+add_executable(runViewImage runViewImage.cxx)
+target_link_libraries(runViewImage ${ITK_LIBRARIES} ${VTK_LIBRARIES})
