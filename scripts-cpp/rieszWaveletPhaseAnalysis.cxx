@@ -72,10 +72,11 @@ template< unsigned int VDimension, typename TWaveletFunction >
 int
 runRieszWaveletPhaseAnalysisTest( const std::string& inputImage,
   const std::string & outputImage,
-  const std::string& inputLevels,
-  const unsigned int& inputBands,
+  const std::string & inputLevels,
+  const unsigned int inputBands,
   const bool applySoftThreshold,
   const bool visualize,
+  const std::string & waveletFunction,
   const double thresholdNumOfSigmas = 2.0)
 {
   const unsigned int Dimension = VDimension;
@@ -230,7 +231,9 @@ runRieszWaveletPhaseAnalysisTest( const std::string& inputImage,
   // typedef itk::ImageFileWriter< typename InverseFFTFilterType::OutputImageType > WriterType;
   typedef itk::ImageFileWriter< ImageFloatType > WriterType;
   typename WriterType::Pointer writer = WriterType::New();
-  std::string appendString = "_L" + n2s(levels) + "_B" + n2s(inputBands);
+  std::string appendString = "_W"  + waveletFunction +
+                             "_L"  + n2s(levels) +
+                             "_B"  + n2s(inputBands);
   if(applySoftThreshold)
     appendString += "_ApplyS" + n2s(thresholdNumOfSigmas);
   std::string outputFile = AppendToFilenameRiesz(outputImage, appendString);
@@ -318,6 +321,7 @@ int main( int argc, char *argv[] )
         inputBands,
         applySoftThreshold,
         visualize,
+        waveletFunction,
         thresholdNumOfSigmas);
       }
     else if ( waveletFunction == "Vow" )
@@ -328,6 +332,7 @@ int main( int argc, char *argv[] )
         inputBands,
         applySoftThreshold,
         visualize,
+        waveletFunction,
         thresholdNumOfSigmas);
       }
     else if ( waveletFunction == "Simoncelli" )
@@ -338,6 +343,7 @@ int main( int argc, char *argv[] )
         inputBands,
         applySoftThreshold,
         visualize,
+        waveletFunction,
         thresholdNumOfSigmas);
       }
     else if ( waveletFunction == "Shannon" )
@@ -348,6 +354,7 @@ int main( int argc, char *argv[] )
         inputBands,
         applySoftThreshold,
         visualize,
+        waveletFunction,
         thresholdNumOfSigmas);
       }
     else
@@ -378,6 +385,7 @@ int main( int argc, char *argv[] )
         inputBands,
         applySoftThreshold,
         visualize,
+        waveletFunction,
         thresholdNumOfSigmas);
       }
     else if ( waveletFunction == "Vow" )
@@ -388,6 +396,7 @@ int main( int argc, char *argv[] )
         inputBands,
         applySoftThreshold,
         visualize,
+        waveletFunction,
         thresholdNumOfSigmas);
       }
     else if ( waveletFunction == "Simoncelli" )
@@ -398,6 +407,7 @@ int main( int argc, char *argv[] )
         inputBands,
         applySoftThreshold,
         visualize,
+        waveletFunction,
         thresholdNumOfSigmas);
       }
     else if ( waveletFunction == "Shannon" )
@@ -408,6 +418,7 @@ int main( int argc, char *argv[] )
         inputBands,
         applySoftThreshold,
         visualize,
+        waveletFunction,
         thresholdNumOfSigmas);
       }
     else
