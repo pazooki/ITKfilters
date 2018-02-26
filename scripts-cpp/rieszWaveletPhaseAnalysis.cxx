@@ -81,12 +81,12 @@ runRieszWaveletPhaseAnalysisTest( const std::string& inputImage,
 {
   const unsigned int Dimension = VDimension;
 
-  typedef double                             PixelType;
-  typedef itk::Image< PixelType, Dimension > ImageType;
-  typedef itk::ImageFileReader< ImageType >  ReaderType;
+  using PixelType = double;
+  using ImageType = itk::Image< PixelType, Dimension >;
+  using ReaderType = itk::ImageFileReader< ImageType >;
 
   itk::NumberToString< unsigned int > n2s;
-  typename ReaderType::Pointer reader = ReaderType::New();
+  auto reader = ReaderType::New();
   reader->SetFileName( inputImage );
   // Defense against dodgy tiff images (wrong metadata)
   // Read incorrectly with SCIFIO module.
@@ -95,28 +95,27 @@ runRieszWaveletPhaseAnalysisTest( const std::string& inputImage,
     reader->SetImageIO( tiffIO );
   reader->Update();
 
-  typedef itk::ZeroDCImageFilter< ImageType > ZeroDCFilterType;
-  typename ZeroDCFilterType::Pointer zeroDCFilter = ZeroDCFilterType::New();
+  using ZeroDCFilterType = itk::ZeroDCImageFilter< ImageType >;
+  auto zeroDCFilter = ZeroDCFilterType::New();
   zeroDCFilter->SetInput( reader->GetOutput() );
   zeroDCFilter->Update();
 
   // Perform FFT on input image.
-  typedef itk::ForwardFFTImageFilter< typename ZeroDCFilterType::OutputImageType >
-    FFTForwardFilterType;
-  typename FFTForwardFilterType::Pointer fftForwardFilter = FFTForwardFilterType::New();
+  using FFTForwardFilterType =
+    itk::ForwardFFTImageFilter< typename ZeroDCFilterType::OutputImageType >;
+  auto fftForwardFilter = FFTForwardFilterType::New();
   fftForwardFilter->SetInput( zeroDCFilter->GetOutput() );
   fftForwardFilter->Update();
   typedef typename FFTForwardFilterType::OutputImageType ComplexImageType;
 
-  typedef itk::InverseFFTImageFilter< ComplexImageType, ImageType > InverseFFTFilterType;
+  using InverseFFTFilterType = itk::InverseFFTImageFilter< ComplexImageType, ImageType >;
 
   // Forward Wavelet
-  typedef TWaveletFunction WaveletFunctionType;
-  typedef itk::WaveletFrequencyFilterBankGenerator< ComplexImageType, WaveletFunctionType >
-    WaveletFilterBankType;
-  typedef itk::WaveletFrequencyForward< ComplexImageType, ComplexImageType, WaveletFilterBankType > ForwardWaveletType;
+  using WaveletFunctionType = TWaveletFunction;
+  using WaveletFilterBankType = itk::WaveletFrequencyFilterBankGenerator< ComplexImageType, WaveletFunctionType >;
+  using ForwardWaveletType = itk::WaveletFrequencyForward< ComplexImageType, ComplexImageType, WaveletFilterBankType >;
   // typedef itk::WaveletFrequencyForwardUndecimated< ComplexImageType, ComplexImageType, WaveletFilterBankType > ForwardWaveletType;
-  typename ForwardWaveletType::Pointer forwardWavelet = ForwardWaveletType::New();
+  auto forwardWavelet = ForwardWaveletType::New();
 
   unsigned int levels = 0;
   if(inputLevels == "max"){
@@ -130,18 +129,13 @@ runRieszWaveletPhaseAnalysisTest( const std::string& inputImage,
   forwardWavelet->SetLevels( levels );
   forwardWavelet->SetInput( fftForwardFilter->GetOutput() );
   forwardWavelet->Update();
-  typename ForwardWaveletType::OutputsType analysisWavelets =
-    forwardWavelet->GetOutputs();
+  auto analysisWavelets = forwardWavelet->GetOutputs();
 
   // Apply Monogenic signal to wavelet results
-  typedef itk::MonogenicSignalFrequencyImageFilter< ComplexImageType >
-    MonogenicSignalFrequencyFilterType;
-  typedef typename MonogenicSignalFrequencyFilterType::OutputImageType
-    VectorMonoOutputType;
-  typedef itk::VectorInverseFFTImageFilter< VectorMonoOutputType >
-    VectorInverseFFTType;
-  typedef itk::PhaseAnalysisSoftThresholdImageFilter< typename VectorInverseFFTType::OutputImageType >
-    PhaseAnalysisFilter;
+  using MonogenicSignalFrequencyFilterType = itk::MonogenicSignalFrequencyImageFilter< ComplexImageType >;
+  using VectorMonoOutputType = typename MonogenicSignalFrequencyFilterType::OutputImageType;
+  using VectorInverseFFTType = itk::VectorInverseFFTImageFilter< VectorMonoOutputType >;
+  using PhaseAnalysisFilter = itk::PhaseAnalysisSoftThresholdImageFilter< typename VectorInverseFFTType::OutputImageType >;
 
   typename ForwardWaveletType::OutputsType modifiedWavelets;
   unsigned int numberOfOutputs = forwardWavelet->GetNumberOfOutputs();
@@ -153,14 +147,10 @@ runRieszWaveletPhaseAnalysisTest( const std::string& inputImage,
     //   modifiedWavelets.push_back( analysisWavelets[i] );
     //   continue;
     //   }
-    typename MonogenicSignalFrequencyFilterType::Pointer monoFilter =
-      MonogenicSignalFrequencyFilterType::New();
-    typename VectorInverseFFTType::Pointer vecInverseFFT =
-      VectorInverseFFTType::New();
-    typename PhaseAnalysisFilter::Pointer phaseAnalyzer =
-      PhaseAnalysisFilter::New();
-    typename FFTForwardFilterType::Pointer fftForwardPhaseFilter =
-      FFTForwardFilterType::New();
+    auto monoFilter = MonogenicSignalFrequencyFilterType::New();
+    auto vecInverseFFT = VectorInverseFFTType::New();
+    auto phaseAnalyzer = PhaseAnalysisFilter::New();
+    auto fftForwardPhaseFilter = FFTForwardFilterType::New();
 
     // Generate a monogenic signal (vector valued)
     monoFilter->SetInput( analysisWavelets[i] );
@@ -191,7 +181,7 @@ runRieszWaveletPhaseAnalysisTest( const std::string& inputImage,
     {
       for ( unsigned int i = 0; i < forwardWavelet->GetNumberOfOutputs(); ++i )
       {
-        typename InverseFFTFilterType::Pointer inverseFFT = InverseFFTFilterType::New();
+        auto inverseFFT = InverseFFTFilterType::New();
         inverseFFT->SetInput(analysisWavelets[i]);
         inverseFFT->Update();
         itk::Testing::ViewImage( inverseFFT->GetOutput(), "WaveletCoef: output #" + n2s(i) );
@@ -202,9 +192,9 @@ runRieszWaveletPhaseAnalysisTest( const std::string& inputImage,
     }
   } //end visualize
 
-  typedef itk::WaveletFrequencyInverse< ComplexImageType, ComplexImageType, WaveletFilterBankType > InverseWaveletType;
-  // typedef itk::WaveletFrequencyInverseUndecimated< ComplexImageType, ComplexImageType, WaveletFilterBankType > InverseWaveletType;
-  typename InverseWaveletType::Pointer inverseWavelet = InverseWaveletType::New();
+  using InverseWaveletType = itk::WaveletFrequencyInverse< ComplexImageType, ComplexImageType, WaveletFilterBankType >;
+  // using InverseWaveletType = typedef itk::WaveletFrequencyInverseUndecimated< ComplexImageType, ComplexImageType, WaveletFilterBankType >;
+  auto inverseWavelet = InverseWaveletType::New();
   inverseWavelet->SetHighPassSubBands( highSubBands );
   inverseWavelet->SetLevels( levels );
   inverseWavelet->SetInputs( modifiedWavelets );
@@ -212,7 +202,7 @@ runRieszWaveletPhaseAnalysisTest( const std::string& inputImage,
   inverseWavelet->ApplyReconstructionFactorsOff();
   inverseWavelet->Update();
 
-  typename InverseFFTFilterType::Pointer inverseFFT = InverseFFTFilterType::New();
+  auto inverseFFT = InverseFFTFilterType::New();
   inverseFFT->SetInput( inverseWavelet->GetOutput() );
   inverseFFT->Update();
 
@@ -222,15 +212,15 @@ runRieszWaveletPhaseAnalysisTest( const std::string& inputImage,
   }
 
   // Cast To Float for save as tiff.
-  typedef itk::Image< float, Dimension >                   ImageFloatType;
-  typedef itk::CastImageFilter< ImageType, ImageFloatType> CastFloatType;
-  typename CastFloatType::Pointer caster = CastFloatType::New();
+  using ImageFloatType = itk::Image< float, Dimension >;
+  using CastFloatType = itk::CastImageFilter< ImageType, ImageFloatType>;
+  auto caster = CastFloatType::New();
   caster->SetInput(inverseFFT->GetOutput());
   caster->Update();
 
   // typedef itk::ImageFileWriter< typename InverseFFTFilterType::OutputImageType > WriterType;
-  typedef itk::ImageFileWriter< ImageFloatType > WriterType;
-  typename WriterType::Pointer writer = WriterType::New();
+  using WriterType = itk::ImageFileWriter< ImageFloatType >;
+  auto writer = WriterType::New();
   std::string appendString = "_W"  + waveletFunction +
                              "_L"  + n2s(levels) +
                              "_B"  + n2s(inputBands);
@@ -298,64 +288,72 @@ int main( int argc, char *argv[] )
      throw po::validation_error(po::validation_error::invalid_option_value, "wavelet");
   // END PARSE
 
-  typedef double                                         PixelType;
+  using PixelType = double;
 
   if ( dimension == 2 )
     {
     const unsigned int ImageDimension = 2;
-    typedef itk::Point< PixelType, ImageDimension >        PointType;
+    using PointType = itk::Point< PixelType, ImageDimension >;
 
-    typedef itk::HeldIsotropicWavelet< PixelType, ImageDimension, PointType >
-      HeldIsotropicWaveletType;
-    typedef itk::VowIsotropicWavelet< PixelType, ImageDimension, PointType >
-      VowIsotropicWaveletType;
-    typedef itk::SimoncelliIsotropicWavelet< PixelType, ImageDimension, PointType >
-      SimoncelliIsotropicWaveletType;
-    typedef itk::ShannonIsotropicWavelet< PixelType, ImageDimension, PointType >
-      ShannonIsotropicWaveletType;
+    using HeldIsotropicWaveletType =
+      itk::HeldIsotropicWavelet< PixelType, ImageDimension, PointType >;
+    using VowIsotropicWaveletType =
+      itk::VowIsotropicWavelet< PixelType, ImageDimension, PointType >;
+    using SimoncelliIsotropicWaveletType =
+      itk::SimoncelliIsotropicWavelet< PixelType, ImageDimension, PointType >;
+    using ShannonIsotropicWaveletType =
+      itk::ShannonIsotropicWavelet< PixelType, ImageDimension, PointType >;
     if ( waveletFunction == "Held" )
       {
-      return runRieszWaveletPhaseAnalysisTest< ImageDimension, HeldIsotropicWaveletType >( inputImage,
-        outputImage,
-        inputLevels,
-        inputBands,
-        applySoftThreshold,
-        visualize,
-        waveletFunction,
-        thresholdNumOfSigmas);
+      return runRieszWaveletPhaseAnalysisTest<
+        ImageDimension, HeldIsotropicWaveletType >(
+            inputImage,
+            outputImage,
+            inputLevels,
+            inputBands,
+            applySoftThreshold,
+            visualize,
+            waveletFunction,
+            thresholdNumOfSigmas);
       }
     else if ( waveletFunction == "Vow" )
       {
-      return runRieszWaveletPhaseAnalysisTest< ImageDimension, VowIsotropicWaveletType >( inputImage,
-        outputImage,
-        inputLevels,
-        inputBands,
-        applySoftThreshold,
-        visualize,
-        waveletFunction,
-        thresholdNumOfSigmas);
+      return runRieszWaveletPhaseAnalysisTest<
+        ImageDimension, VowIsotropicWaveletType >(
+            inputImage,
+            outputImage,
+            inputLevels,
+            inputBands,
+            applySoftThreshold,
+            visualize,
+            waveletFunction,
+            thresholdNumOfSigmas);
       }
     else if ( waveletFunction == "Simoncelli" )
       {
-      return runRieszWaveletPhaseAnalysisTest< ImageDimension, SimoncelliIsotropicWaveletType >( inputImage,
-        outputImage,
-        inputLevels,
-        inputBands,
-        applySoftThreshold,
-        visualize,
-        waveletFunction,
-        thresholdNumOfSigmas);
+      return runRieszWaveletPhaseAnalysisTest<
+        ImageDimension, SimoncelliIsotropicWaveletType >(
+            inputImage,
+            outputImage,
+            inputLevels,
+            inputBands,
+            applySoftThreshold,
+            visualize,
+            waveletFunction,
+            thresholdNumOfSigmas);
       }
     else if ( waveletFunction == "Shannon" )
       {
-      return runRieszWaveletPhaseAnalysisTest< ImageDimension, ShannonIsotropicWaveletType >( inputImage,
-        outputImage,
-        inputLevels,
-        inputBands,
-        applySoftThreshold,
-        visualize,
-        waveletFunction,
-        thresholdNumOfSigmas);
+      return runRieszWaveletPhaseAnalysisTest<
+        ImageDimension, ShannonIsotropicWaveletType >(
+            inputImage,
+            outputImage,
+            inputLevels,
+            inputBands,
+            applySoftThreshold,
+            visualize,
+            waveletFunction,
+            thresholdNumOfSigmas);
       }
     else
       {
@@ -367,59 +365,67 @@ int main( int argc, char *argv[] )
   else if ( dimension == 3 )
     {
     const unsigned int ImageDimension = 3;
-    typedef itk::Point< PixelType, ImageDimension >        PointType;
+    using PointType = itk::Point< PixelType, ImageDimension >;
 
-    typedef itk::HeldIsotropicWavelet< PixelType, ImageDimension, PointType >
-      HeldIsotropicWaveletType;
-    typedef itk::VowIsotropicWavelet< PixelType, ImageDimension, PointType >
-      VowIsotropicWaveletType;
-    typedef itk::SimoncelliIsotropicWavelet< PixelType, ImageDimension, PointType >
-      SimoncelliIsotropicWaveletType;
-    typedef itk::ShannonIsotropicWavelet< PixelType, ImageDimension, PointType >
-      ShannonIsotropicWaveletType;
+    using HeldIsotropicWaveletType =
+      itk::HeldIsotropicWavelet< PixelType, ImageDimension, PointType >;
+    using VowIsotropicWaveletType =
+      itk::VowIsotropicWavelet< PixelType, ImageDimension, PointType >;
+    using SimoncelliIsotropicWaveletType =
+      itk::SimoncelliIsotropicWavelet< PixelType, ImageDimension, PointType >;
+    using ShannonIsotropicWaveletType =
+      itk::ShannonIsotropicWavelet< PixelType, ImageDimension, PointType >;
     if ( waveletFunction == "Held" )
       {
-      return runRieszWaveletPhaseAnalysisTest< ImageDimension, HeldIsotropicWaveletType >( inputImage,
-        outputImage,
-        inputLevels,
-        inputBands,
-        applySoftThreshold,
-        visualize,
-        waveletFunction,
-        thresholdNumOfSigmas);
+      return runRieszWaveletPhaseAnalysisTest<
+        ImageDimension, HeldIsotropicWaveletType >(
+            inputImage,
+            outputImage,
+            inputLevels,
+            inputBands,
+            applySoftThreshold,
+            visualize,
+            waveletFunction,
+            thresholdNumOfSigmas);
       }
     else if ( waveletFunction == "Vow" )
       {
-      return runRieszWaveletPhaseAnalysisTest< ImageDimension, VowIsotropicWaveletType >( inputImage,
-        outputImage,
-        inputLevels,
-        inputBands,
-        applySoftThreshold,
-        visualize,
-        waveletFunction,
-        thresholdNumOfSigmas);
+      return runRieszWaveletPhaseAnalysisTest<
+        ImageDimension, VowIsotropicWaveletType >(
+            inputImage,
+            outputImage,
+            inputLevels,
+            inputBands,
+            applySoftThreshold,
+            visualize,
+            waveletFunction,
+            thresholdNumOfSigmas);
       }
     else if ( waveletFunction == "Simoncelli" )
       {
-      return runRieszWaveletPhaseAnalysisTest< ImageDimension, SimoncelliIsotropicWaveletType >( inputImage,
-        outputImage,
-        inputLevels,
-        inputBands,
-        applySoftThreshold,
-        visualize,
-        waveletFunction,
-        thresholdNumOfSigmas);
+      return runRieszWaveletPhaseAnalysisTest<
+        ImageDimension, SimoncelliIsotropicWaveletType >(
+            inputImage,
+            outputImage,
+            inputLevels,
+            inputBands,
+            applySoftThreshold,
+            visualize,
+            waveletFunction,
+            thresholdNumOfSigmas);
       }
     else if ( waveletFunction == "Shannon" )
       {
-      return runRieszWaveletPhaseAnalysisTest< ImageDimension, ShannonIsotropicWaveletType >( inputImage,
-        outputImage,
-        inputLevels,
-        inputBands,
-        applySoftThreshold,
-        visualize,
-        waveletFunction,
-        thresholdNumOfSigmas);
+      return runRieszWaveletPhaseAnalysisTest<
+        ImageDimension, ShannonIsotropicWaveletType >(
+            inputImage,
+            outputImage,
+            inputLevels,
+            inputBands,
+            applySoftThreshold,
+            visualize,
+            waveletFunction,
+            thresholdNumOfSigmas);
       }
     else
       {
