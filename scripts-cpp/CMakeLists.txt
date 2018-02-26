@@ -7,6 +7,9 @@ project(ITKfilters_scripts)
 # Since ITK4.13, ITKImageIO
 set(use_itk_modules
     IsotropicWavelets
+    ITKFastMarching
+    ITKRegionGrowing
+    ITKAnisotropicSmoothing # For fastMarching denoise
     ITKVtkGlue
     ITKImageIO
     )
@@ -29,6 +32,12 @@ include_directories("./include")
 
 add_executable(rieszWaveletPhaseAnalysis rieszWaveletPhaseAnalysis.cxx)
 target_link_libraries(rieszWaveletPhaseAnalysis ${Boost_LIBRARIES} ${ITK_LIBRARIES} ${VTK_LIBRARIES})
+
+add_executable(fastMarchingSegmentation fastMarchingSegmentation.cxx)
+target_link_libraries(fastMarchingSegmentation ${Boost_LIBRARIES} ${ITK_LIBRARIES} ${VTK_LIBRARIES})
+
+add_executable(regionGrowingSegmentation regionGrowingSegmentation.cxx)
+target_link_libraries(regionGrowingSegmentation ${Boost_LIBRARIES} ${ITK_LIBRARIES} ${VTK_LIBRARIES})
 
 add_executable(runViewImage runViewImage.cxx)
 target_link_libraries(runViewImage ${ITK_LIBRARIES} ${VTK_LIBRARIES})
