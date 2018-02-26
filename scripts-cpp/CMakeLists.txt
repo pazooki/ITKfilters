@@ -39,5 +39,8 @@ target_link_libraries(fastMarchingSegmentation ${Boost_LIBRARIES} ${ITK_LIBRARIE
 add_executable(regionGrowingSegmentation regionGrowingSegmentation.cxx)
 target_link_libraries(regionGrowingSegmentation ${Boost_LIBRARIES} ${ITK_LIBRARIES} ${VTK_LIBRARIES})
 
+add_executable(regionGrowingConfidenceConnectedSegmentation regionGrowingConfidenceConnectedSegmentation.cxx)
+target_link_libraries(regionGrowingConfidenceConnectedSegmentation ${Boost_LIBRARIES} ${ITK_LIBRARIES} ${VTK_LIBRARIES})
+
 add_executable(runViewImage runViewImage.cxx)
 target_link_libraries(runViewImage ${ITK_LIBRARIES} ${VTK_LIBRARIES})
