@@ -97,8 +97,10 @@ int main( int argc, char *argv[])
   itk::NumberToString< double > n2s;
   const fs::path inputImageStem_path = fs::path(inputImage).stem();
   const fs::path outputFolder_path = fs::absolute(fs::path(outputFolder));
-  const std::string parameters = std::string(
-      "_SegmentRG_l" + n2s(lowerThreshold) + "_u" + n2s(upperThreshold) );
+  const std::string parameters =
+      "_SegmentRG_l" + n2s(lowerThreshold) +
+      "_u" + n2s(upperThreshold) +
+      "_p" + n2s(safeBinaryPercentage);
   const std::string outputImage = (outputFolder_path /
       fs::path(inputImageStem_path.string() +
         parameters + "." + outputExtension)).string();

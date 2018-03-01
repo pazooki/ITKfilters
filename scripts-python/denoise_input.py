@@ -4,7 +4,7 @@ import itk
 import numpy as np
 
 if len(sys.argv) < 5 or len(sys.argv) > 6:
-  print("Usage: " + sys.argv[0] + "inputImage outputFOLDER numberOfIterations conductance timeStep  ")
+  print("Usage: " + sys.argv[0] + "inputImage outputFOLDER numberOfIterations conductance [timeStep=0.0625]")
   sys.exit(1)
 print("Anisotropic Denoising %s" % sys.argv[1])
 
@@ -16,12 +16,12 @@ output_extension = "nrrd"
 iters = int(sys.argv[3])
 conductance = float(sys.argv[4])
 time_step = 1.0/(2.0**4) # 0.0625
-if len(sys.argv) == 5:
-  time_step = float(sys.argv[4])
+if len(sys.argv) == 6:
+  time_step = float(sys.argv[5])
 output_filename = os.path.join(output_folder, filename +
-                               "_AnisDenoise_c" + str(conductance) +
+                               "_AnisDenoise_t" + str(time_step) +
                                "_N" + str(iters) +
-                               "_t" + str(time_step) +
+                               "_c" + str(conductance) +
                                "." + output_extension)
 PixelType = itk.F
 Dimension = 3

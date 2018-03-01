@@ -20,12 +20,10 @@ radius = sys.argv[4]
 iterations = sys.argv[5]
 output_extension = "nrrd"
 output_filename = os.path.join(output_folder, filename +
-                               "_Majority" + majority +
-                               "_Radius" + radius +
-                               "_Iterations" + iterations +
+                               "_Hole_M" + majority +
+                               "_R" + radius +
+                               "_N" + iterations +
                                "." + output_extension)
-radius = float(radius)
-
 PixelType = itk.UC
 Dimension = 3
 ImageType = itk.Image[PixelType, Dimension]
