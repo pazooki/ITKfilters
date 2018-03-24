@@ -5,6 +5,7 @@ if len(sys.argv) != 9:
   print("Usage: " + sys.argv[0] + "inputImage outputImage index.x index.y index.z size.x size.y size.z")
   sys.exit(1)
 print("extract_image_filter %s" % sys.argv[1])
+print("output: %s" % sys.argv[2])
 
 input_filename = sys.argv[1]
 basename = os.path.basename(input_filename)
