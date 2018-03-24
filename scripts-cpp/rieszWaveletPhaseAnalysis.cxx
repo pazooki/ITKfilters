@@ -142,11 +142,11 @@ runRieszWaveletPhaseAnalysisTest( const std::string& inputImage,
   for ( unsigned int i = 0; i < forwardWavelet->GetNumberOfOutputs(); ++i )
     {
     std::cout << "Output #: " << i << " / " << numberOfOutputs - 1 << std::endl;
-    // if( i == numberOfOutputs - 1 ) // TODO Held does not modify approx image, but it does not generate better results.
-    //   {
-    //   modifiedWavelets.push_back( analysisWavelets[i] );
-    //   continue;
-    //   }
+    if( i == numberOfOutputs - 1 )
+      {
+      modifiedWavelets.push_back( analysisWavelets[i] );
+      continue;
+      }
     auto monoFilter = MonogenicSignalFrequencyFilterType::New();
     auto vecInverseFFT = VectorInverseFFTType::New();
     auto phaseAnalyzer = PhaseAnalysisFilter::New();
