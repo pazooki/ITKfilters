@@ -8,7 +8,7 @@ print("binary_3d %s" % sys.argv[1])
 
 input_filename = sys.argv[1]
 basename = os.path.basename(input_filename)
-filename = os.path.splitext(basename)[0]
+filename, file_extension = os.path.splitext(basename)
 output_folder = sys.argv[2]
 binary_method = sys.argv[3]
 invert = "no"
