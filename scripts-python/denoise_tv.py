@@ -17,10 +17,12 @@ output_folder = sys.argv[2]
 output_extension = "nrrd"
 lam = float(sys.argv[3])
 output_filename = os.path.join(output_folder, filename + "_tv" + str(lam) + "." + output_extension)
-PixelType = itk.F
-Dimension = 3
-ImageType = itk.Image[PixelType, Dimension]
-reader = itk.ImageFileReader[ImageType].New(FileName=input_filename)
+# PixelType = itk.F
+# PixelType = itk.UC
+# Dimension = 3
+# ImageType = itk.Image[PixelType, Dimension]
+# reader = itk.ImageFileReader[ImageType].New(FileName=input_filename)
+reader = itk.ImageFileReader.New(FileName=input_filename)
 reader.Update()
 image = reader.GetOutput()
 
@@ -30,7 +32,8 @@ dimensions_to_penalyze = [1,2,3]
 tv_array = ptv.tvgen(image_array, np.array([lam,lam,lam]), dimensions_to_penalyze, np.array([norm,norm,norm]))
 
 tv_array = np.ascontiguousarray(tv_array, dtype=image_array.dtype)
-modifiedImage = itk.PyBuffer[ImageType].GetImageViewFromArray(tv_array)
+# modifiedImage = itk.PyBuffer[ImageType].GetImageViewFromArray(tv_array)
+modifiedImage = itk.GetImageViewFromArray(tv_array)
 itk.ImageFileWriter.New(Input=modifiedImage, FileName=output_filename).Update()
 
 from subprocess import Popen
