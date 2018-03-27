@@ -36,7 +36,7 @@ tv_array = np.ascontiguousarray(tv_array, dtype=image_array.dtype)
 modifiedImage = itk.GetImageViewFromArray(tv_array)
 itk.ImageFileWriter.New(Input=modifiedImage, FileName=output_filename).Update()
 
-from subprocess import Popen
-testDriver = "/home/phc/tmp/IsotropicWaveletsTestDriver"
-pin = Popen([testDriver, 'runViewImage', input_filename, 'input'])
-pout = Popen([testDriver, 'runViewImage', output_filename, 'TV'])
+# from subprocess import Popen
+# testDriver = "/home/phc/tmp/IsotropicWaveletsTestDriver"
+# pin = Popen([testDriver, 'runViewImage', input_filename, 'input'])
+# pout = Popen([testDriver, 'runViewImage', output_filename, 'TV'])
