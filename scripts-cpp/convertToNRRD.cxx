@@ -36,6 +36,7 @@
 #include "itkImageFileWriter.h"
 #include "itkNumberToString.h"
 #include "itkViewImage.h"
+#include <itkChangeInformationImageFilter.h>
 
 // boost::program_options
 #include <boost/program_options/options_description.hpp>
@@ -50,6 +51,7 @@ template<typename ImageType>
 void convert_image(
     const std::string & inputImage,
     const std::string & outputImage,
+    bool changeInfo,
     bool visualize)
 {
   using ReaderType = itk::ImageFileReader< ImageType >;
@@ -61,10 +63,29 @@ void convert_image(
   if(tiffIO->CanReadFile(inputImage.c_str()))
     reader->SetImageIO( tiffIO );
 
+  typename ImageType::Pointer handle = reader->GetOutput();
+  if(changeInfo)
+  {
+    std::cout << "Changing info" << std::endl;
+    using ChangeInformationFilterType = itk::ChangeInformationImageFilter< ImageType >;
+    auto changeInputInfoFilter = ChangeInformationFilterType::New();
+    typename ImageType::PointType origin_new;
+    origin_new.Fill(0);
+    typename ImageType::SpacingType spacing_new;
+    spacing_new.Fill(1);
+    changeInputInfoFilter->SetInput(reader->GetOutput());
+    changeInputInfoFilter->ChangeAll();
+    changeInputInfoFilter->SetOutputOrigin(origin_new);
+    changeInputInfoFilter->SetOutputSpacing(spacing_new);
+    changeInputInfoFilter->Update();
+    handle = changeInputInfoFilter->GetOutput();
+  }
+  std::cout << "Changed" << std::endl;
+
   using WriterType = itk::ImageFileWriter< ImageType >;
   auto writer = WriterType::New();
   writer->SetFileName( outputImage );
-  writer->SetInput( reader->GetOutput() );
+  writer->SetInput( handle );
   try
     {
     writer->Update();
@@ -94,7 +115,7 @@ int main( int argc, char *argv[])
     ( "dimension,d", po::value<unsigned int>()->required(), "Use imageInfo if needed." )
     ( "pixelType,p", po::value<std::string>()->required(), "Use imageInfo if needed." )
     ( "visualize,t", po::bool_switch()->default_value(false), "Visualize using vtk based viewer.")
-    ( "verbose,v",  po::bool_switch()->default_value(false), "verbose output." );
+    ( "changeInfo,c",  po::bool_switch()->default_value(false), "ChangeInfo to default." );
 
   po::variables_map vm;
   try {
@@ -115,7 +136,7 @@ int main( int argc, char *argv[])
   const std::string outputExtension = vm["outputExtension"].as<std::string>();
   const unsigned int dimension = vm["dimension"].as<unsigned int>();
   const std::string pixelType = vm["pixelType"].as<std::string>();
-  const bool verbose = vm["verbose"].as<bool>();
+  const bool changeInfo = vm["changeInfo"].as<bool>();
   const bool visualize = vm["visualize"].as<bool>();
 
   // END PARSE
@@ -128,26 +149,34 @@ int main( int argc, char *argv[])
   if(pixelType == "double" ) {
     if(dimension == 3) {
       using ImageType = itk::Image<double, 3>;
-      convert_image<ImageType>(inputImage, outputImage, visualize);
+      convert_image<ImageType>(inputImage, outputImage, changeInfo, visualize);
     } else if (dimension == 2) {
       using ImageType = itk::Image<double, 2>;
-      convert_image<ImageType>(inputImage, outputImage, visualize);
+      convert_image<ImageType>(inputImage, outputImage, changeInfo, visualize);
     }
   } else if(pixelType == "float" ) {
     if(dimension == 3) {
       using ImageType = itk::Image<float, 3>;
-      convert_image<ImageType>(inputImage, outputImage, visualize);
+      convert_image<ImageType>(inputImage, outputImage, changeInfo, visualize);
     } else if (dimension == 2) {
       using ImageType = itk::Image<float, 2>;
-      convert_image<ImageType>(inputImage, outputImage, visualize);
+      convert_image<ImageType>(inputImage, outputImage, changeInfo, visualize);
     }
   } else if(pixelType == "unsigned char" ) {
     if(dimension == 3) {
       using ImageType = itk::Image<unsigned char, 3>;
-      convert_image<ImageType>(inputImage, outputImage, visualize);
+      convert_image<ImageType>(inputImage, outputImage, changeInfo, visualize);
     } else if (dimension == 2) {
       using ImageType = itk::Image<unsigned char, 2>;
-      convert_image<ImageType>(inputImage, outputImage, visualize);
+      convert_image<ImageType>(inputImage, outputImage, changeInfo, visualize);
+    }
+  } else if(pixelType == "unsigned short" ) {
+    if(dimension == 3) {
+      using ImageType = itk::Image<unsigned short, 3>;
+      convert_image<ImageType>(inputImage, outputImage, changeInfo, visualize);
+    } else if (dimension == 2) {
+      using ImageType = itk::Image<unsigned short, 2>;
+      convert_image<ImageType>(inputImage, outputImage, changeInfo, visualize);
     }
   }
 
