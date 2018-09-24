@@ -289,8 +289,8 @@ int main( int argc, char *argv[] )
   auto safeBinaryOutput = safeBinarizer->GetOutput();
 
   if(visualize){
-    itk::Testing::ViewImage( reader->GetOutput(), "Input" );
-    itk::Testing::ViewImage( safeBinaryOutput, "Safe Binary Output" );
+    itk::ViewImage<InternalImageType>::View( reader->GetOutput(), "Input" );
+    itk::ViewImage<OutputImageType>::View( safeBinaryOutput, "Safe Binary Output" );
   }
   // safeBinarizer.SetUpperThreshold(max_value);
   // Set seeds from binary image
@@ -368,10 +368,10 @@ int main( int argc, char *argv[] )
   }
 
   if(visualize){
-    itk::Testing::ViewImage( thresholder->GetOutput(), "Output" );
-    itk::Testing::ViewImage( gradientMagnitude->GetOutput(), "gradient" );
-    itk::Testing::ViewImage( sigmoid->GetOutput(), "sigmoid" );
-    itk::Testing::ViewImage( fastMarching->GetOutput(), "FastMarching (no-threshold)" );
+    itk::ViewImage<OutputImageType>::View( thresholder->GetOutput(), "Output" );
+    itk::ViewImage<InternalImageType>::View( gradientMagnitude->GetOutput(), "gradient" );
+    itk::ViewImage<InternalImageType>::View( sigmoid->GetOutput(), "sigmoid" );
+    itk::ViewImage<InternalImageType>::View( fastMarching->GetOutput(), "FastMarching (no-threshold)" );
   }
 
   //  \itkcaption[FastMarching segmentation example parameters]{Parameters used

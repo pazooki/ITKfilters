@@ -20,10 +20,19 @@
 #include "itkImageFileReader.h"
 #include "itkViewImage.h"
 
-using namespace std;
-using namespace itk;
-
-int main(int argc, char* argv[])
+/**
+ * App to run ViewImage in an image file.
+ *
+ * This file is added to the TestDriver but it is not a regression test (no add_test).
+ * It can be used for developers to fast visualize images with:
+ *
+ * ITK-build/bin/ITKVtkGlueTestDriver runViewImage /path/to/image.xxx \
+ * [title] [win_width] [win_height]
+ *
+ * \sa itk::ViewImage
+ */
+int
+main(int argc, char* argv[])
 {
   if ( argc < 2 || argc == 4 || argc > 5 )
     {
@@ -31,29 +40,29 @@ int main(int argc, char* argv[])
     return EXIT_FAILURE;
     }
   // Defaults
-  std::string win_title = "itkViewImage";
-  size_t win_x = 600;
-  size_t win_y = 600;
+  std::string winTitle = "itkViewImage";
+  size_t winWidth = 600;
+  size_t winHeight = 600;
   if ( argc >= 3 )
     {
-    win_title = argv[2];
+    winTitle = argv[2];
     }
   if ( argc == 5 )
     {
-    win_x = atoi(argv[3]);
-    win_y = atoi(argv[4]);
+    winWidth = std::stoi(argv[3]);
+    winHeight = std::stoi(argv[4]);
     }
-  const string inputImage  = argv[1];
+  const std::string inputImage  = argv[1];
 
-  const unsigned int dimension = 3;
-  typedef float                              PixelType;
-  typedef itk::Image< PixelType, dimension > ImageType;
-  typedef itk::ImageFileReader< ImageType >  ReaderType;
-  ReaderType::Pointer reader = ReaderType::New();
+  constexpr unsigned int dimension = 3;
+  using PixelType = float;
+  using ImageType = itk::Image< PixelType, dimension >;
+  using ReaderType = itk::ImageFileReader< ImageType >;
+  auto reader = ReaderType::New();
   reader->SetFileName(inputImage);
   reader->Update();
 
-  itk::Testing::ViewImage(reader->GetOutput(), win_title, win_x, win_y );
+  itk::ViewImage<ImageType>::View(reader->GetOutput(), winTitle, winWidth, winHeight );
 
   return EXIT_SUCCESS;
 }

@@ -12,8 +12,9 @@ set(use_itk_modules
     ITKAnisotropicSmoothing # For fastMarching denoise
     ITKVtkGlue
     ITKImageIO
+    ITKImageFrequency # ITK 5.0 (ViewImage)
     )
-find_package(ITK COMPONENTS ${use_itk_modules} REQUIRED)
+find_package(ITK 5.0 COMPONENTS ${use_itk_modules} REQUIRED)
 include(${ITK_USE_FILE})
 message(status "** ITK Libraries:  ${ITK_LIBRARIES}")
 message(status "** ITK Includes:  ${ITK_INCLUDE_DIRS}")
