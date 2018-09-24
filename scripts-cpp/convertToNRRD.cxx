@@ -97,7 +97,7 @@ void convert_image(
     }
 
   if(visualize){
-    itk::Testing::ViewImage( reader->GetOutput(), "Input" );
+    itk::ViewImage<ImageType>::View( reader->GetOutput(), "Input" );
   }
 
 }

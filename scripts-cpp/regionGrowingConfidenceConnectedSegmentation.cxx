@@ -174,8 +174,8 @@ int main( int argc, char *argv[])
   auto safeBinaryOutput = safeBinarizer->GetOutput();
 
   if(visualize){
-    itk::Testing::ViewImage( reader->GetOutput(), "Input" );
-    itk::Testing::ViewImage( safeBinaryOutput, "Safe Binary Output" );
+    itk::ViewImage<InternalImageType>::View( reader->GetOutput(), "Input" );
+    itk::ViewImage<OutputImageType>::View( safeBinaryOutput, "Safe Binary Output" );
   }
   // Set seeds from binary image
   using OutputIteratorType = itk::ImageRegionConstIteratorWithIndex< OutputImageType >;
@@ -199,7 +199,7 @@ int main( int argc, char *argv[])
     }
 
   if(visualize){
-    itk::Testing::ViewImage( caster->GetOutput(), "Output" );
+    itk::ViewImage<OutputImageType>::View( caster->GetOutput(), "Output" );
   }
 
 
