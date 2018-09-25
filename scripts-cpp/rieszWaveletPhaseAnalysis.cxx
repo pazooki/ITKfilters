@@ -19,6 +19,7 @@
 #include "itkForwardFFTImageFilter.h"
 #include "itkInverseFFTImageFilter.h"
 #include "itkWaveletUtilities.h"
+#include "itkFFTPadPositiveIndexImageFilter.h"
 #include "itkWaveletFrequencyForward.h"
 #include "itkWaveletFrequencyInverse.h"
 #include "itkWaveletFrequencyForwardUndecimated.h"
@@ -37,6 +38,7 @@
 #include "itkImage.h"
 #include "itkImageFileReader.h"
 #include "itkTIFFImageIO.h"
+#include "itkChangeInformationImageFilter.h"
 #include "itkImageFileWriter.h"
 #include "itkCastImageFilter.h"
 #include "itkNumberToString.h"
@@ -54,6 +56,8 @@ namespace fs = boost::filesystem;
 
 // Visualize for dev/debug purposes. Set in cmake file. Requires VTK
 #include "itkViewImage.h"
+#include <itkComplexToRealImageFilter.h>
+#include <itkComplexToPhaseImageFilter.h>
 
 std::string
 AppendToFilenameRiesz(const std::string& filename, const std::string & appendix)
@@ -90,14 +94,37 @@ runRieszWaveletPhaseAnalysisTest( const std::string& inputImage,
   reader->SetFileName( inputImage );
   // Defense against dodgy tiff images (wrong metadata)
   // Read incorrectly with SCIFIO module.
-  itk::TIFFImageIO::Pointer tiffIO = itk::TIFFImageIO::New();
-  if(tiffIO->CanReadFile(inputImage.c_str()))
-    reader->SetImageIO( tiffIO );
+  /* itk::TIFFImageIO::Pointer tiffIO = itk::TIFFImageIO::New(); */
+  /* if(tiffIO->CanReadFile(inputImage.c_str())) */
+  /*   reader->SetImageIO( tiffIO ); */
   reader->Update();
+
+  using FFTPadFilterType = itk::FFTPadPositiveIndexImageFilter<ImageType>;
+  auto fftPadFilter = FFTPadFilterType::New();
+  fftPadFilter->SetInput(reader->GetOutput());
+  fftPadFilter->Update();
+
+  auto sizeOriginal = reader->GetOutput()->GetLargestPossibleRegion().GetSize();
+  auto sizeAfterPad = fftPadFilter->GetOutput()->GetLargestPossibleRegion().GetSize();
+  std::cout << "Image Padded" << std::endl;
+  std::cout << "Original Size:" << sizeOriginal << std::endl;
+  std::cout << "After Pad Size:" << sizeAfterPad << std::endl;
+  unsigned int scaleFactor = 2;
+  unsigned int maxNumberOfLevels = itk::utils::ComputeMaxNumberOfLevels(sizeAfterPad, scaleFactor);
+  std::cout << "MaxNumberOfLevels allowed for the padded size: " << maxNumberOfLevels << std::endl;
+
+  using ChangeInformationFilterType = itk::ChangeInformationImageFilter< ImageType >;
+  auto changeInfoFilter = ChangeInformationFilterType::New();
+  changeInfoFilter->SetInput( fftPadFilter->GetOutput() );
+  changeInfoFilter->ChangeDirectionOn();
+  typename ImageType::DirectionType directionIdentity;
+  directionIdentity.SetIdentity();
+  changeInfoFilter->SetOutputDirection(directionIdentity);
+  changeInfoFilter->Update();
 
   using ZeroDCFilterType = itk::ZeroDCImageFilter< ImageType >;
   auto zeroDCFilter = ZeroDCFilterType::New();
-  zeroDCFilter->SetInput( reader->GetOutput() );
+  zeroDCFilter->SetInput( changeInfoFilter->GetOutput() );
   zeroDCFilter->Update();
 
   // Perform FFT on input image.
@@ -106,7 +133,7 @@ runRieszWaveletPhaseAnalysisTest( const std::string& inputImage,
   auto fftForwardFilter = FFTForwardFilterType::New();
   fftForwardFilter->SetInput( zeroDCFilter->GetOutput() );
   fftForwardFilter->Update();
-  typedef typename FFTForwardFilterType::OutputImageType ComplexImageType;
+  using ComplexImageType = typename FFTForwardFilterType::OutputImageType;
 
   using InverseFFTFilterType = itk::InverseFFTImageFilter< ComplexImageType, ImageType >;
 
@@ -114,7 +141,7 @@ runRieszWaveletPhaseAnalysisTest( const std::string& inputImage,
   using WaveletFunctionType = TWaveletFunction;
   using WaveletFilterBankType = itk::WaveletFrequencyFilterBankGenerator< ComplexImageType, WaveletFunctionType >;
   using ForwardWaveletType = itk::WaveletFrequencyForward< ComplexImageType, ComplexImageType, WaveletFilterBankType >;
-  // typedef itk::WaveletFrequencyForwardUndecimated< ComplexImageType, ComplexImageType, WaveletFilterBankType > ForwardWaveletType;
+  // using ForwardWaveletType = itk::WaveletFrequencyForwardUndecimated< ComplexImageType, ComplexImageType, WaveletFilterBankType >;
   auto forwardWavelet = ForwardWaveletType::New();
 
   unsigned int levels = 0;
@@ -176,24 +203,42 @@ runRieszWaveletPhaseAnalysisTest( const std::string& inputImage,
 
   if(visualize) {
     // Visualize and compare modified wavelets coefficients (and approx image)
-    bool visualizeCoefficients = false;
-    if ( visualizeCoefficients )
+    bool visualizeSpatialCoefficients = false;
+    if ( visualizeSpatialCoefficients )
     {
       for ( unsigned int i = 0; i < forwardWavelet->GetNumberOfOutputs(); ++i )
       {
         auto inverseFFT = InverseFFTFilterType::New();
         inverseFFT->SetInput(analysisWavelets[i]);
         inverseFFT->Update();
-        itk::ViewImage<ImageType>::View( inverseFFT->GetOutput(), "WaveletCoef: output #" + n2s(i) );
+        itk::ViewImage<ImageType>::View( inverseFFT->GetOutput(), "WaveletCoef (spatial domain) output #" + n2s(i) );
         inverseFFT->SetInput(modifiedWavelets[i]);
         inverseFFT->Update();
-        itk::ViewImage<ImageType>::View( inverseFFT->GetOutput(), "WaveletCoef. PhaseAnalyzed #" + n2s(i) );
+        itk::ViewImage<ImageType>::View( inverseFFT->GetOutput(), "WaveletCoef (spatial domain) PhaseAnalyzed #" + n2s(i) );
+      }
+    }
+    bool visualizeFrequencyCoefficients = false;
+    if ( visualizeFrequencyCoefficients )
+    {
+      for ( unsigned int i = 0; i < forwardWavelet->GetNumberOfOutputs(); ++i )
+      {
+        using ComplexToRealFilter = itk::ComplexToRealImageFilter< ComplexImageType, ImageType >;
+        auto complexToRealFilter = ComplexToRealFilter::New();
+        complexToRealFilter->SetInput(analysisWavelets[i]);
+        complexToRealFilter->Update();
+        itk::ViewImage<ImageType>::View( complexToRealFilter->GetOutput(), "WaveletCoef: frequency-domain RealPart #" + n2s(i) );
+
+        using ComplexToPhaseFilter = itk::ComplexToPhaseImageFilter< ComplexImageType, ImageType >;
+        auto complexToPhaseFilter = ComplexToPhaseFilter::New();
+        complexToPhaseFilter->SetInput(analysisWavelets[i]);
+        complexToPhaseFilter->Update();
+        itk::ViewImage<ImageType>::View(complexToPhaseFilter->GetOutput(), "WaveletCoef: frequency-domain Phase #" + n2s(i));
       }
     }
   } //end visualize
 
   using InverseWaveletType = itk::WaveletFrequencyInverse< ComplexImageType, ComplexImageType, WaveletFilterBankType >;
-  // using InverseWaveletType = typedef itk::WaveletFrequencyInverseUndecimated< ComplexImageType, ComplexImageType, WaveletFilterBankType >;
+  // using InverseWaveletType = itk::WaveletFrequencyInverseUndecimated< ComplexImageType, ComplexImageType, WaveletFilterBankType >;
   auto inverseWavelet = InverseWaveletType::New();
   inverseWavelet->SetHighPassSubBands( highSubBands );
   inverseWavelet->SetLevels( levels );
