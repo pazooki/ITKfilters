@@ -6,7 +6,6 @@ project(ITKfilters_scripts)
 # Following: https://discourse.itk.org/t/find-all-available-modules-from-groupio/351/5
 # Since ITK4.13, ITKImageIO
 set(use_itk_modules
-    IsotropicWavelets
     ITKFastMarching
     ITKRegionGrowing
     ITKAnisotropicSmoothing # For fastMarching denoise
@@ -14,10 +13,20 @@ set(use_itk_modules
     ITKImageIO
     ITKImageFrequency # ITK 5.0 (ViewImage)
     )
-find_package(ITK 5.0 COMPONENTS ${use_itk_modules} REQUIRED)
+set(optional_itk_modules
+    AnisotropicDiffusionLBR
+    IsotropicWavelets
+    )
+
+# DEV: ITK does not support OPTIONAL_COMPONENTS
+# It wil fail if not found anyways.
+find_package(ITK 5.0 REQUIRED
+    COMPONENTS ${use_itk_modules}
+    OPTIONAL_COMPONENTS ${optional_itk_modules}
+    )
 include(${ITK_USE_FILE})
 message(status "** ITK Libraries:  ${ITK_LIBRARIES}")
-message(status "** ITK Includes:  ${ITK_INCLUDE_DIRS}")
+# message(status "** ITK Includes:  ${ITK_INCLUDE_DIRS}")
 
 # For visualize image only (kind of optional for the future)
 find_package(VTK REQUIRED)
@@ -30,9 +39,6 @@ find_package(Boost COMPONENTS
 include_directories(SYSTEM ${Boost_INCLUDE_DIRS})
 
 include_directories("./include")
-
-add_executable(rieszWaveletPhaseAnalysis rieszWaveletPhaseAnalysis.cxx)
-target_link_libraries(rieszWaveletPhaseAnalysis ${Boost_LIBRARIES} ${ITK_LIBRARIES} ${VTK_LIBRARIES})
 
 add_executable(fastMarchingSegmentation fastMarchingSegmentation.cxx)
 target_link_libraries(fastMarchingSegmentation ${Boost_LIBRARIES} ${ITK_LIBRARIES} ${VTK_LIBRARIES})
@@ -51,3 +57,18 @@ target_link_libraries(convertToNRRD ${Boost_LIBRARIES} ${ITK_LIBRARIES} ${VTK_LI
 
 add_executable(runViewImage runViewImage.cxx)
 target_link_libraries(runViewImage ${ITK_LIBRARIES} ${VTK_LIBRARIES})
+
+# if(ITK_IsotropicWavelets)
+    message(STATUS "Adding IsotropicWavelets script")
+    add_executable(rieszWaveletPhaseAnalysis rieszWaveletPhaseAnalysis.cxx)
+    target_link_libraries(rieszWaveletPhaseAnalysis ${Boost_LIBRARIES} ${ITK_LIBRARIES} ${VTK_LIBRARIES})
+
+    add_executable(fftPadPositiveIndex fftPadPositiveIndex.cxx)
+    target_link_libraries(fftPadPositiveIndex ${Boost_LIBRARIES} ${ITK_LIBRARIES} ${VTK_LIBRARIES})
+# endif()
+
+# if(ITK_AnisotropicDiffusionLBR)
+    message(STATUS "Adding AnisotropicDiffusionLBR script")
+    add_executable(denoiseCoherenceAnisotropicLBR denoiseCoherenceAnisotropicLBR.cxx)
+    target_link_libraries(denoiseCoherenceAnisotropicLBR ${ITK_LIBRARIES} ${VTK_LIBRARIES})
+# endif()

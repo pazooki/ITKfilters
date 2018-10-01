@@ -19,7 +19,6 @@
 #include "itkForwardFFTImageFilter.h"
 #include "itkInverseFFTImageFilter.h"
 #include "itkWaveletUtilities.h"
-#include "itkFFTPadPositiveIndexImageFilter.h"
 #include "itkWaveletFrequencyForward.h"
 #include "itkWaveletFrequencyInverse.h"
 #include "itkWaveletFrequencyForwardUndecimated.h"
@@ -99,23 +98,14 @@ runRieszWaveletPhaseAnalysisTest( const std::string& inputImage,
   /*   reader->SetImageIO( tiffIO ); */
   reader->Update();
 
-  using FFTPadFilterType = itk::FFTPadPositiveIndexImageFilter<ImageType>;
-  auto fftPadFilter = FFTPadFilterType::New();
-  fftPadFilter->SetInput(reader->GetOutput());
-  fftPadFilter->Update();
-
   auto sizeOriginal = reader->GetOutput()->GetLargestPossibleRegion().GetSize();
-  auto sizeAfterPad = fftPadFilter->GetOutput()->GetLargestPossibleRegion().GetSize();
-  std::cout << "Image Padded" << std::endl;
-  std::cout << "Original Size:" << sizeOriginal << std::endl;
-  std::cout << "After Pad Size:" << sizeAfterPad << std::endl;
   unsigned int scaleFactor = 2;
-  unsigned int maxNumberOfLevels = itk::utils::ComputeMaxNumberOfLevels(sizeAfterPad, scaleFactor);
+  unsigned int maxNumberOfLevels = itk::utils::ComputeMaxNumberOfLevels(sizeOriginal, scaleFactor);
   std::cout << "MaxNumberOfLevels allowed for the padded size: " << maxNumberOfLevels << std::endl;
 
   using ChangeInformationFilterType = itk::ChangeInformationImageFilter< ImageType >;
   auto changeInfoFilter = ChangeInformationFilterType::New();
-  changeInfoFilter->SetInput( fftPadFilter->GetOutput() );
+  changeInfoFilter->SetInput( reader->GetOutput() );
   changeInfoFilter->ChangeDirectionOn();
   typename ImageType::DirectionType directionIdentity;
   directionIdentity.SetIdentity();
