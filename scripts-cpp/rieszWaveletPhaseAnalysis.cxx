@@ -101,7 +101,7 @@ runRieszWaveletPhaseAnalysisTest( const std::string& inputImage,
   auto sizeOriginal = reader->GetOutput()->GetLargestPossibleRegion().GetSize();
   unsigned int scaleFactor = 2;
   unsigned int maxNumberOfLevels = itk::utils::ComputeMaxNumberOfLevels(sizeOriginal, scaleFactor);
-  std::cout << "MaxNumberOfLevels allowed for the padded size: " << maxNumberOfLevels << std::endl;
+  std::cout << "MaxNumberOfLevels: " << maxNumberOfLevels  << ". Max level recommended: " << maxNumberOfLevels - 3 << std::endl;
 
   using ChangeInformationFilterType = itk::ChangeInformationImageFilter< ImageType >;
   auto changeInfoFilter = ChangeInformationFilterType::New();
@@ -276,7 +276,7 @@ int main( int argc, char *argv[] )
   general_opt.add_options()
     ( "help,h", "display this message." )
     ( "input,i", po::value<std::string>()->required(), "Input image." )
-    ( "outputFolder,o", po::value<std::string>()->required(), "Outputfolder path. A number of images will be generated depending on levels and bands." )
+    ( "outputFolder,o", po::value<std::string>()->required(), "Output folder path. A number of images will be generated depending on levels and bands." )
     ( "outputExtension,e", po::value<std::string>()->default_value("nrrd"), "Output extension." )
     ( "levels,l", po::value<std::string>()->required(), "Number of Levels for the wavelet decomposition. Allowed: positive digit or max" )
     ( "bands,b", po::value<unsigned int>()->required(), "Number of Bands for the wavelet decomposition." )
@@ -293,7 +293,7 @@ int main( int argc, char *argv[] )
     if (vm.count ( "help" ) || argc<=1 )
       {
       std::cout << "Basic usage:\n" << general_opt << "\n";
-      return false;
+      return EXIT_SUCCESS;
       }
     po::notify ( vm );
   } catch ( const std::exception& e ) {

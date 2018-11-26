@@ -16,21 +16,6 @@
  *
  *=========================================================================*/
 
-//  Software Guide : BeginCommandLineArgs
-//    INPUTS:  {BrainProtonDensitySlice.png}
-//    OUTPUTS: {ConnectedThresholdOutput1.png}
-//    ARGUMENTS:    60 116 150 180
-//  Software Guide : EndCommandLineArgs
-//  Software Guide : BeginCommandLineArgs
-//    INPUTS:  {BrainProtonDensitySlice.png}
-//    OUTPUTS: {ConnectedThresholdOutput2.png}
-//    ARGUMENTS:    81 112 210 250
-//  Software Guide : EndCommandLineArgs
-//  Software Guide : BeginCommandLineArgs
-//    INPUTS:  {BrainProtonDensitySlice.png}
-//    OUTPUTS: {ConnectedThresholdOutput3.png}
-//    ARGUMENTS:    107 69 180 210
-#include "itkConnectedThresholdImageFilter.h"
 #include "itkImage.h"
 #include "itkCastImageFilter.h"
 #include "itkImageFileReader.h"
@@ -38,6 +23,9 @@
 #include "itkBinaryThresholdImageFilter.h"
 #include "itkNumberToString.h"
 #include "itkMinimumMaximumImageCalculator.h"
+#include "itkConnectedThresholdImageFilter.h"
+#include "itkConnectedComponentImageFilter.h"
+#include "itkLabelShapeKeepNObjectsImageFilter.h"
 #include "itkViewImage.h"
 
 // boost::program_options
@@ -69,6 +57,7 @@ int main( int argc, char *argv[])
     ( "upperThreshold,u", po::value<double>()->required(), " -0.5." )
     ( "safeBinaryPercentage,p", po::value<double>()->default_value(0.1), " To generate seeds" )
     ( "visualize,t", po::bool_switch()->default_value(false), "Visualize using vtk based viewer.")
+    ( "numberOfLargestComponent,x", po::value<unsigned int>()->default_value(0), "Extract x connected components, ordered by number of pixels. If 0, extract all components.")
     ( "verbose,v",  po::bool_switch()->default_value(false), "verbose output." );
 
   po::variables_map vm;
@@ -93,14 +82,18 @@ int main( int argc, char *argv[])
   const double safeBinaryPercentage = vm["safeBinaryPercentage"].as<double>();
   const double lowerThreshold = vm["lowerThreshold"].as<double>();
   const double upperThreshold = vm["upperThreshold"].as<double>();
+  const unsigned int numberOfLargestComponent = vm["numberOfLargestComponent"].as<unsigned int>();
   // END PARSE
   itk::NumberToString< double > n2s;
   const fs::path inputImageStem_path = fs::path(inputImage).stem();
   const fs::path outputFolder_path = fs::absolute(fs::path(outputFolder));
-  const std::string parameters =
+  std::string parameters =
       "_SegmentRG_l" + n2s(lowerThreshold) +
       "_u" + n2s(upperThreshold) +
       "_p" + n2s(safeBinaryPercentage);
+  if(numberOfLargestComponent > 0) {
+    parameters+="_x" + n2s(numberOfLargestComponent);
+  }
   const std::string outputImage = (outputFolder_path /
       fs::path(inputImageStem_path.string() +
         parameters + "." + outputExtension)).string();
@@ -138,7 +131,26 @@ int main( int argc, char *argv[])
   auto connectedThreshold = ConnectedFilterType::New();
   connectedThreshold->SetInput( reader->GetOutput() );
   caster->SetInput( connectedThreshold->GetOutput() );
-  writer->SetInput( caster->GetOutput() );
+
+  using ConnectedComponentFilterType = itk::ConnectedComponentImageFilter<OutputImageType, OutputImageType>;
+  auto connectedComponent = ConnectedComponentFilterType::New();
+  connectedComponent->SetInput(caster->GetOutput());
+  connectedComponent->Update();
+
+    using LabelShapeKeepNObjectsImageFilterType = itk::LabelShapeKeepNObjectsImageFilter< OutputImageType >;
+    auto labelShapeKeepNObjectsImageFilter = LabelShapeKeepNObjectsImageFilterType::New();
+    labelShapeKeepNObjectsImageFilter->SetInput( connectedComponent->GetOutput() );
+    labelShapeKeepNObjectsImageFilter->SetBackgroundValue( 0 );
+    labelShapeKeepNObjectsImageFilter->SetNumberOfObjects( numberOfLargestComponent );
+    labelShapeKeepNObjectsImageFilter->SetAttribute( LabelShapeKeepNObjectsImageFilterType::LabelObjectType::NUMBER_OF_PIXELS);
+    writer->SetInput( labelShapeKeepNObjectsImageFilter->GetOutput() );
+  if(numberOfLargestComponent > 0) {
+    std::cout << "Extracting " << numberOfLargestComponent << " greatest components." << std::endl;
+    labelShapeKeepNObjectsImageFilter->Update();
+    writer->SetInput(labelShapeKeepNObjectsImageFilter->GetOutput());
+  } else {
+    writer->SetInput(connectedComponent->GetOutput());
+  }
 
   connectedThreshold->SetLower(  lowerThreshold  );
   connectedThreshold->SetUpper(  upperThreshold  );
@@ -186,6 +198,7 @@ int main( int argc, char *argv[])
   try
     {
     writer->Update();
+    std::cout << "Output to: " << outputImage << std::endl;
     }
   catch( itk::ExceptionObject & excep )
     {
@@ -194,7 +207,7 @@ int main( int argc, char *argv[])
     }
 
   if(visualize){
-    itk::ViewImage<OutputImageType>::View( caster->GetOutput(), "Output" );
+    itk::ViewImage<OutputImageType>::View( writer->GetInput(), "Output" );
   }
 
 

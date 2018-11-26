@@ -7,8 +7,14 @@ project(ITKfilters_scripts)
 # Since ITK4.13, ITKImageIO
 set(use_itk_modules
     ITKFastMarching
-    ITKRegionGrowing
     ITKAnisotropicSmoothing # For fastMarching denoise
+    ITKCommon
+    ITKConnectedComponents
+    ITKIOImageBase
+    ITKImageFilterBase
+    ITKLabelMap
+    ITKRegionGrowing
+    ITKThresholding
     ITKVtkGlue
     ITKImageIO
     ITKImageFrequency # ITK 5.0 (ViewImage)

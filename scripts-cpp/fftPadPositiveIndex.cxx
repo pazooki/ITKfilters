@@ -80,6 +80,7 @@ void pad_image(
 
   if(visualize){
     itk::ViewImage<ImageType>::View( reader->GetOutput(), "Input" );
+    itk::ViewImage<ImageType>::View( fftPadFilter->GetOutput(), "Padded Output: " + boundaryConditionName );
   }
 
 }
@@ -153,12 +154,20 @@ int main( int argc, char *argv[])
       using ImageType = itk::Image<unsigned char, 2>;
       pad_image<ImageType>(inputImage, outputImage, boundaryConditionName, visualize);
     }
-  } else if(pixelType == "unsigned short" ) {
+  } else if(pixelType == "short" ) {
     if(dimension == 3) {
-      using ImageType = itk::Image<unsigned short, 3>;
+      using ImageType = itk::Image<short, 3>;
       pad_image<ImageType>(inputImage, outputImage, boundaryConditionName, visualize);
     } else if (dimension == 2) {
-      using ImageType = itk::Image<unsigned short, 2>;
+      using ImageType = itk::Image<short, 2>;
+      pad_image<ImageType>(inputImage, outputImage, boundaryConditionName, visualize);
+    }
+  } else if(pixelType == "int" ) {
+    if(dimension == 3) {
+      using ImageType = itk::Image<int, 3>;
+      pad_image<ImageType>(inputImage, outputImage, boundaryConditionName, visualize);
+    } else if (dimension == 2) {
+      using ImageType = itk::Image<int, 2>;
       pad_image<ImageType>(inputImage, outputImage, boundaryConditionName, visualize);
     }
   } else {
