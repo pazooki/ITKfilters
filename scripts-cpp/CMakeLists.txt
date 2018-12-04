@@ -64,6 +64,10 @@ target_link_libraries(convertToNRRD ${Boost_LIBRARIES} ${ITK_LIBRARIES} ${VTK_LI
 add_executable(runViewImage runViewImage.cxx)
 target_link_libraries(runViewImage ${ITK_LIBRARIES} ${VTK_LIBRARIES})
 
+add_executable(compareImages itkTestingComparisonImageFilterTest.cxx)
+target_include_directories(compareImages PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include")
+target_link_libraries(compareImages ${ITK_LIBRARIES})# ${VTK_LIBRARIES})
+
 # if(ITK_IsotropicWavelets)
     message(STATUS "Adding IsotropicWavelets script")
     add_executable(rieszWaveletPhaseAnalysis rieszWaveletPhaseAnalysis.cxx)
@@ -74,7 +78,7 @@ target_link_libraries(runViewImage ${ITK_LIBRARIES} ${VTK_LIBRARIES})
 # endif()
 
 # if(ITK_AnisotropicDiffusionLBR)
-    message(STATUS "Adding AnisotropicDiffusionLBR script")
-    add_executable(denoiseCoherenceAnisotropicLBR denoiseCoherenceAnisotropicLBR.cxx)
-    target_link_libraries(denoiseCoherenceAnisotropicLBR ${ITK_LIBRARIES} ${VTK_LIBRARIES})
+    # message(STATUS "Adding AnisotropicDiffusionLBR script")
+    # add_executable(denoiseCoherenceAnisotropicLBR denoiseCoherenceAnisotropicLBR.cxx)
+    # target_link_libraries(denoiseCoherenceAnisotropicLBR ${ITK_LIBRARIES} ${VTK_LIBRARIES})
 # endif()
