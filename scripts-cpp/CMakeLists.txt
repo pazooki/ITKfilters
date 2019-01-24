@@ -7,7 +7,7 @@ project(ITKfilters_scripts)
 # Since ITK4.13, ITKImageIO
 set(use_itk_modules
     ITKFastMarching
-    ITKAnisotropicSmoothing # For fastMarching denoise
+    # ITKAnisotropicSmoothing # For fastMarching denoise
     ITKCommon
     ITKConnectedComponents
     ITKIOImageBase
@@ -20,7 +20,7 @@ set(use_itk_modules
     ITKImageFrequency # ITK 5.0 (ViewImage)
     )
 set(optional_itk_modules
-    AnisotropicDiffusionLBR
+    # AnisotropicDiffusionLBR
     IsotropicWavelets
     )
 
@@ -69,12 +69,15 @@ target_include_directories(compareImages PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/in
 target_link_libraries(compareImages ${ITK_LIBRARIES})# ${VTK_LIBRARIES})
 
 # if(ITK_IsotropicWavelets)
-    message(STATUS "Adding IsotropicWavelets script")
+    message(STATUS "Adding IsotropicWavelets scripts")
     add_executable(rieszWaveletPhaseAnalysis rieszWaveletPhaseAnalysis.cxx)
     target_link_libraries(rieszWaveletPhaseAnalysis ${Boost_LIBRARIES} ${ITK_LIBRARIES} ${VTK_LIBRARIES})
 
     add_executable(fftPadPositiveIndex fftPadPositiveIndex.cxx)
     target_link_libraries(fftPadPositiveIndex ${Boost_LIBRARIES} ${ITK_LIBRARIES} ${VTK_LIBRARIES})
+
+    add_executable(rotateRieszWithStructureTensorDirections rotateRieszWithStructureTensorDirections.cxx)
+    target_link_libraries(rotateRieszWithStructureTensorDirections ${Boost_LIBRARIES} ${ITK_LIBRARIES} ${VTK_LIBRARIES})
 # endif()
 
 # if(ITK_AnisotropicDiffusionLBR)
