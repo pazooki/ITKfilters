@@ -71,7 +71,7 @@ AppendToFilenameRiesz(const std::string& filename, const std::string & appendix)
 // 4. Wavelet reconstruction (inverse) using as coefficients the output of the PhaseAnalysis.
 // Without applying reconstruction factors: ApplyReconstructionFactorOff()
 // 5. The result of the reconstruction will be an image that uses phase information at each level/band for improving local structure information, and can also work as an equalizator of brightness.
-template< unsigned int VDimension, typename TWaveletFunction >
+template< unsigned int VDimension, typename TWaveletFunction, bool TUseUndecimated >
 int
 runRieszWaveletPhaseAnalysisTest( const std::string& inputImage,
   const std::string & outputImage,
@@ -130,7 +130,11 @@ runRieszWaveletPhaseAnalysisTest( const std::string& inputImage,
   // Forward Wavelet
   using WaveletFunctionType = TWaveletFunction;
   using WaveletFilterBankType = itk::WaveletFrequencyFilterBankGenerator< ComplexImageType, WaveletFunctionType >;
-  using ForwardWaveletType = itk::WaveletFrequencyForward< ComplexImageType, ComplexImageType, WaveletFilterBankType >;
+  using ForwardWaveletType = typename std::conditional<TUseUndecimated,
+        itk::WaveletFrequencyForwardUndecimated< ComplexImageType, ComplexImageType, WaveletFilterBankType >,
+        itk::WaveletFrequencyForward< ComplexImageType, ComplexImageType, WaveletFilterBankType >
+          >::type;
+  // using ForwardWaveletType = itk::WaveletFrequencyForward< ComplexImageType, ComplexImageType, WaveletFilterBankType >;
   // using ForwardWaveletType = itk::WaveletFrequencyForwardUndecimated< ComplexImageType, ComplexImageType, WaveletFilterBankType >;
   auto forwardWavelet = ForwardWaveletType::New();
 
@@ -227,7 +231,11 @@ runRieszWaveletPhaseAnalysisTest( const std::string& inputImage,
     }
   } //end visualize
 
-  using InverseWaveletType = itk::WaveletFrequencyInverse< ComplexImageType, ComplexImageType, WaveletFilterBankType >;
+  using InverseWaveletType = typename std::conditional<TUseUndecimated,
+        itk::WaveletFrequencyInverseUndecimated< ComplexImageType, ComplexImageType, WaveletFilterBankType >,
+        itk::WaveletFrequencyInverse< ComplexImageType, ComplexImageType, WaveletFilterBankType >
+          >::type;
+  // using InverseWaveletType = itk::WaveletFrequencyInverse< ComplexImageType, ComplexImageType, WaveletFilterBankType >;
   // using InverseWaveletType = itk::WaveletFrequencyInverseUndecimated< ComplexImageType, ComplexImageType, WaveletFilterBankType >;
   auto inverseWavelet = InverseWaveletType::New();
   inverseWavelet->SetHighPassSubBands( highSubBands );
@@ -256,9 +264,10 @@ runRieszWaveletPhaseAnalysisTest( const std::string& inputImage,
   // typedef itk::ImageFileWriter< typename InverseFFTFilterType::OutputImageType > WriterType;
   using WriterType = itk::ImageFileWriter< ImageFloatType >;
   auto writer = WriterType::New();
-  std::string appendString = "_W"  + waveletFunction +
-                             "_L"  + n2s(levels) +
-                             "_B"  + n2s(inputBands);
+  std::string appendString = TUseUndecimated ? "_Undecimated" : "_Decimated";
+  appendString += "_W"  + waveletFunction +
+                  "_L"  + n2s(levels) +
+                  "_B"  + n2s(inputBands);
   if(applySoftThreshold)
     appendString += "_ApplyS" + n2s(thresholdNumOfSigmas);
   std::string outputFile = AppendToFilenameRiesz(outputImage, appendString);
@@ -267,6 +276,46 @@ runRieszWaveletPhaseAnalysisTest( const std::string& inputImage,
 
   writer->Update();
   return EXIT_SUCCESS;
+}
+
+template< unsigned int VDimension, typename TWaveletFunction>
+int
+run_decimated_or_undecimated(
+  const bool useUndecimated,
+  const std::string& inputImage,
+  const std::string & outputImage,
+  const std::string & inputLevels,
+  const unsigned int inputBands,
+  const bool applySoftThreshold,
+  const bool visualize,
+  const std::string & waveletFunction,
+  const double thresholdNumOfSigmas = 2.0)
+{
+  if(useUndecimated) {
+    constexpr bool TUseUndecimated = true;
+    return runRieszWaveletPhaseAnalysisTest<
+      VDimension, TWaveletFunction, TUseUndecimated >(
+          inputImage,
+          outputImage,
+          inputLevels,
+          inputBands,
+          applySoftThreshold,
+          visualize,
+          waveletFunction,
+          thresholdNumOfSigmas);
+  } else {
+    constexpr bool TUseUndecimated = false;
+    return runRieszWaveletPhaseAnalysisTest<
+      VDimension, TWaveletFunction, TUseUndecimated >(
+          inputImage,
+          outputImage,
+          inputLevels,
+          inputBands,
+          applySoftThreshold,
+          visualize,
+          waveletFunction,
+          thresholdNumOfSigmas);
+  }
 }
 
 int main( int argc, char *argv[] )
@@ -283,6 +332,7 @@ int main( int argc, char *argv[] )
     ( "wavelet,w", po::value<std::string>()->default_value("Held"), "Type of Wavelet: Valid: Held, Simoncelli, Vow, Shannon." )
     ( "dimension,d", po::value<unsigned int>()->required(), "Dimension of the image: 2 or 3" )
     ( "apply", po::bool_switch()->default_value(false), "Apply Soft Threshold.")
+    ( "useUndecimated,u", po::bool_switch()->default_value(false), "Use undecimated wavelet pyramid (default is decimated).")
     ( "threshold_sigmas,s", po::value<double>()->default_value(2.0), "Sigmas for soft threshold." )
     ( "visualize,t", po::bool_switch()->default_value(false), "Visualize using vtk based viewer.")
     ( "verbose,v",  po::bool_switch()->default_value(false), "verbose output." );
@@ -312,6 +362,7 @@ int main( int argc, char *argv[] )
   const std::string waveletFunction = vm["wavelet"].as<std::string>();
   const unsigned int dimension = vm["dimension"].as<unsigned int>();
   const bool applySoftThreshold = vm["apply"].as<bool>();
+  const bool useUndecimated = vm["useUndecimated"].as<bool>();
   const double thresholdNumOfSigmas = vm["threshold_sigmas"].as<double>();
   const bool verbose = vm["verbose"].as<bool>();
   const bool visualize = vm["visualize"].as<bool>();
@@ -340,8 +391,9 @@ int main( int argc, char *argv[] )
       itk::ShannonIsotropicWavelet< PixelType, ImageDimension, PointType >;
     if ( waveletFunction == "Held" )
       {
-      return runRieszWaveletPhaseAnalysisTest<
+      return run_decimated_or_undecimated<
         ImageDimension, HeldIsotropicWaveletType >(
+            useUndecimated,
             inputImage,
             outputImage,
             inputLevels,
@@ -353,8 +405,9 @@ int main( int argc, char *argv[] )
       }
     else if ( waveletFunction == "Vow" )
       {
-      return runRieszWaveletPhaseAnalysisTest<
+      return run_decimated_or_undecimated<
         ImageDimension, VowIsotropicWaveletType >(
+            useUndecimated,
             inputImage,
             outputImage,
             inputLevels,
@@ -366,8 +419,9 @@ int main( int argc, char *argv[] )
       }
     else if ( waveletFunction == "Simoncelli" )
       {
-      return runRieszWaveletPhaseAnalysisTest<
+      return run_decimated_or_undecimated<
         ImageDimension, SimoncelliIsotropicWaveletType >(
+            useUndecimated,
             inputImage,
             outputImage,
             inputLevels,
@@ -379,8 +433,9 @@ int main( int argc, char *argv[] )
       }
     else if ( waveletFunction == "Shannon" )
       {
-      return runRieszWaveletPhaseAnalysisTest<
+      return run_decimated_or_undecimated<
         ImageDimension, ShannonIsotropicWaveletType >(
+            useUndecimated,
             inputImage,
             outputImage,
             inputLevels,
@@ -412,8 +467,9 @@ int main( int argc, char *argv[] )
       itk::ShannonIsotropicWavelet< PixelType, ImageDimension, PointType >;
     if ( waveletFunction == "Held" )
       {
-      return runRieszWaveletPhaseAnalysisTest<
+      return run_decimated_or_undecimated<
         ImageDimension, HeldIsotropicWaveletType >(
+            useUndecimated,
             inputImage,
             outputImage,
             inputLevels,
@@ -425,8 +481,9 @@ int main( int argc, char *argv[] )
       }
     else if ( waveletFunction == "Vow" )
       {
-      return runRieszWaveletPhaseAnalysisTest<
+      return run_decimated_or_undecimated<
         ImageDimension, VowIsotropicWaveletType >(
+            useUndecimated,
             inputImage,
             outputImage,
             inputLevels,
@@ -438,8 +495,9 @@ int main( int argc, char *argv[] )
       }
     else if ( waveletFunction == "Simoncelli" )
       {
-      return runRieszWaveletPhaseAnalysisTest<
+      return run_decimated_or_undecimated<
         ImageDimension, SimoncelliIsotropicWaveletType >(
+            useUndecimated,
             inputImage,
             outputImage,
             inputLevels,
@@ -451,8 +509,9 @@ int main( int argc, char *argv[] )
       }
     else if ( waveletFunction == "Shannon" )
       {
-      return runRieszWaveletPhaseAnalysisTest<
+      return run_decimated_or_undecimated<
         ImageDimension, ShannonIsotropicWaveletType >(
+            useUndecimated,
             inputImage,
             outputImage,
             inputLevels,
