@@ -78,6 +78,9 @@ target_link_libraries(compareImages ${ITK_LIBRARIES})# ${VTK_LIBRARIES})
 
     add_executable(rotateRieszWithStructureTensorDirections rotateRieszWithStructureTensorDirections.cxx)
     target_link_libraries(rotateRieszWithStructureTensorDirections ${Boost_LIBRARIES} ${ITK_LIBRARIES} ${VTK_LIBRARIES})
+
+    add_executable(generate_wavelet_coefficients generate_wavelet_coefficients.cxx)
+    target_link_libraries(generate_wavelet_coefficients ${Boost_LIBRARIES} ${ITK_LIBRARIES})
 # endif()
 
 # if(ITK_AnisotropicDiffusionLBR)
