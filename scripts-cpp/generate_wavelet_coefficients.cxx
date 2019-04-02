@@ -6,19 +6,20 @@
 #include <boost/program_options/parsers.hpp>
 #include <boost/program_options/variables_map.hpp>
 
-#include "itkImage.h"
-#include "itkImageFileReader.h"
-#include "itkImageFileWriter.h"
-#include "itkWaveletFrequencyForward.h"
-#include "itkWaveletFrequencyForwardUndecimated.h"
-#include "itkWaveletFrequencyFilterBankGenerator.h"
-#include "itkHeldIsotropicWavelet.h"
-#include "itkVowIsotropicWavelet.h"
-#include "itkSimoncelliIsotropicWavelet.h"
-#include "itkShannonIsotropicWavelet.h"
-#include "itkForwardFFTImageFilter.h"
-#include "itkComplexToRealImageFilter.h"
-#include "itkComplexToImaginaryImageFilter.h"
+#include <itkImage.h>
+#include <itkImageFileReader.h>
+#include <itkImageFileWriter.h>
+#include <itkWaveletFrequencyForward.h>
+#include <itkWaveletFrequencyForwardUndecimated.h>
+#include <itkWaveletFrequencyFilterBankGenerator.h>
+#include <itkHeldIsotropicWavelet.h>
+#include <itkVowIsotropicWavelet.h>
+#include <itkSimoncelliIsotropicWavelet.h>
+#include <itkShannonIsotropicWavelet.h>
+#include <itkForwardFFTImageFilter.h>
+#include <itkComplexToRealImageFilter.h>
+#include <itkComplexToImaginaryImageFilter.h>
+#include "restore_metadata_from_reference_image.h"
 
 namespace fs = boost::filesystem;
 namespace po = boost::program_options;
@@ -34,6 +35,7 @@ int run( const std::string& inputImage,
          const bool writeRealPart,
          const bool writeImaginaryPart)
 {
+  const bool verbose = true;
   constexpr unsigned int ImageDimension = VImageDimension;
   using PixelType = double;
   using ImageType = itk::Image< PixelType, ImageDimension >;
@@ -82,17 +84,25 @@ int run( const std::string& inputImage,
     { // Complex image
       using WriterType = itk::ImageFileWriter<ComplexImageType>;
       auto writer = WriterType::New();
+      restoreMetadata(forwardWavelet->GetOutput(linearIndex), reader->GetOutput(),
+          TUseUndecimated ? 0 : level_band_pair.first);
       writer->SetInput(forwardWavelet->GetOutput(linearIndex));
       auto complexOutput_path = outputImageBasePerLevel_path;
       complexOutput_path += inputImage_path.extension();
       writer->SetFileName(complexOutput_path.c_str());
       writer->Update();
+      if(verbose) {
+        std::cout << "ComplexOutput: " << complexOutput_path.string() << std::endl;
+      }
     }
     if(writeRealPart)
     { // Real Part
       using ComplexToRealFilter = itk::ComplexToRealImageFilter<ComplexImageType, ImageType>;
       auto complexToReal = ComplexToRealFilter::New();
       complexToReal->SetInput(forwardWavelet->GetOutput(linearIndex));
+      complexToReal->Update();
+      restoreMetadata(complexToReal->GetOutput(), reader->GetOutput(),
+          TUseUndecimated ? 0 : level_band_pair.first);
       using WriterRealType = itk::ImageFileWriter<ImageType>;
       auto writeReal = WriterRealType::New();
       writeReal->SetInput(complexToReal->GetOutput());
@@ -101,34 +111,54 @@ int run( const std::string& inputImage,
       complexToReal_path += inputImage_path.extension();
       writeReal->SetFileName(complexToReal_path.c_str());
       writeReal->Update();
+      if(verbose) {
+        std::cout << "RealOutput: " << complexToReal_path.string() << std::endl;
+      }
     }
     if(writeImaginaryPart)
     { // Imaginary Part
       using ComplexToImaginaryFilter = itk::ComplexToImaginaryImageFilter<ComplexImageType, ImageType>;
       auto complexToImaginary = ComplexToImaginaryFilter::New();
       complexToImaginary->SetInput(forwardWavelet->GetOutput(linearIndex));
+      complexToImaginary->Update();
       using WriterImaginaryType = itk::ImageFileWriter<ImageType>;
       auto writeImaginary = WriterImaginaryType::New();
+      restoreMetadata(complexToImaginary->GetOutput(), reader->GetOutput(),
+          TUseUndecimated ? 0 : level_band_pair.first);
       writeImaginary->SetInput(complexToImaginary->GetOutput());
       auto complexToImaginary_path = outputImageBasePerLevel_path;
       complexToImaginary_path += "_imaginary";
       complexToImaginary_path += inputImage_path.extension();
       writeImaginary->SetFileName(complexToImaginary_path.c_str());
       writeImaginary->Update();
+      if(verbose) {
+        std::cout << "ImaginaryOutput: " << complexToImaginary_path.string() << std::endl;
+      }
     }
     if(writeSpatial)
     { // Inverse FFT (spatial domain)
       using InverseFFTFilterType = itk::InverseFFTImageFilter< ComplexImageType, ImageType >;
       auto inverseFFT = InverseFFTFilterType::New();
       inverseFFT->SetInput(forwardWavelet->GetOutput(linearIndex));
+      inverseFFT->Update();
       using WriterRealType = itk::ImageFileWriter<ImageType>;
       auto writeReal = WriterRealType::New();
-      writeReal->SetInput(inverseFFT->GetOutput());
+      auto outputImage = inverseFFT->GetOutput();
+      restoreMetadata(outputImage, reader->GetOutput(),
+          TUseUndecimated ? 0 : level_band_pair.first);
+      if(verbose) {
+        std::cout << "Level: " << level_band_pair.first <<
+          " .Spacing: " << outputImage->GetSpacing() << std::endl;
+      }
+      writeReal->SetInput(outputImage);
       auto waveletCoefficientSpatial_path = outputImageBasePerLevel_path;
       waveletCoefficientSpatial_path += "_spatial";
       waveletCoefficientSpatial_path += inputImage_path.extension();
       writeReal->SetFileName(waveletCoefficientSpatial_path.c_str());
       writeReal->Update();
+      if(verbose) {
+        std::cout << "SpatialOutput: " << waveletCoefficientSpatial_path.string() << std::endl;
+      }
     }
   }
 
