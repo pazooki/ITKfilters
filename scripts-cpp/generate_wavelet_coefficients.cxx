@@ -77,6 +77,8 @@ int run( const std::string& inputImage,
     auto outputImageBasePerLevel_path = outputImageBase_path;
     outputImageBasePerLevel_path += TUseUndecimated ? "_Undecimated" : "_Decimated";
     outputImageBasePerLevel_path += "_W" + waveletFunction +
+      "_L" + std::to_string(levels) +
+      "_B" + std::to_string(highSubBands) +
       "_l" + std::to_string(level_band_pair.first) +
       "_b" + std::to_string(level_band_pair.second);
 
