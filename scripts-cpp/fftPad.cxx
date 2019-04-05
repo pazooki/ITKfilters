@@ -3,7 +3,8 @@
 #include "itkImageFileWriter.h"
 #include "itkNumberToString.h"
 #include "itkViewImage.h"
-#include "itkFFTPadPositiveIndexImageFilter.h"
+// #include "itkFFTPadPositiveIndexImageFilter.h"
+#include "itkFFTPadImageFilter.h"
 // Boundary Conditions:
 #include "itkZeroFluxNeumannBoundaryCondition.h"
 #include "itkConstantBoundaryCondition.h"
@@ -29,7 +30,8 @@ void pad_image(
   auto reader = ReaderType::New();
   reader->SetFileName( inputImage );
   typename ImageType::Pointer handle = reader->GetOutput();
-  using FFTPadFilterType = itk::FFTPadPositiveIndexImageFilter< ImageType >;
+  // using FFTPadFilterType = itk::FFTPadPositiveIndexImageFilter< ImageType >;
+  using FFTPadFilterType = itk::FFTPadImageFilter< ImageType >;
   auto fftPadFilter = FFTPadFilterType::New();
   fftPadFilter->SetInput(reader->GetOutput());
   if(boundaryConditionName == "ZeroFluxNeumann")

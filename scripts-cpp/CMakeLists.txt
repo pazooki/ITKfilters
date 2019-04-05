@@ -73,8 +73,8 @@ target_link_libraries(compareImages ${ITK_LIBRARIES})# ${VTK_LIBRARIES})
     add_executable(rieszWaveletPhaseAnalysis rieszWaveletPhaseAnalysis.cxx)
     target_link_libraries(rieszWaveletPhaseAnalysis ${Boost_LIBRARIES} ${ITK_LIBRARIES} ${VTK_LIBRARIES})
 
-    add_executable(fftPadPositiveIndex fftPadPositiveIndex.cxx)
-    target_link_libraries(fftPadPositiveIndex ${Boost_LIBRARIES} ${ITK_LIBRARIES} ${VTK_LIBRARIES})
+    add_executable(fftPad fftPad.cxx)
+    target_link_libraries(fftPad ${Boost_LIBRARIES} ${ITK_LIBRARIES} ${VTK_LIBRARIES})
 
     add_executable(rotateRieszWithStructureTensorDirections rotateRieszWithStructureTensorDirections.cxx)
     target_link_libraries(rotateRieszWithStructureTensorDirections ${Boost_LIBRARIES} ${ITK_LIBRARIES} ${VTK_LIBRARIES})
