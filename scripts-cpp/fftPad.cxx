@@ -24,6 +24,7 @@ void pad_image(
     const std::string & inputImage,
     const std::string & outputImage,
     const std::string & boundaryConditionName,
+    const int sizeGreatestPrimeFactor,
     bool visualize)
 {
   using ReaderType = itk::ImageFileReader< ImageType >;
@@ -56,7 +57,14 @@ void pad_image(
     std::cerr << "Invalid boundary condition: " << boundaryConditionName << std::endl;
     throw std::runtime_error( "Invalid boundary condition: " + boundaryConditionName);
     }
+
+  if(sizeGreatestPrimeFactor != -1) {
+    fftPadFilter->SetSizeGreatestPrimeFactor(sizeGreatestPrimeFactor);
+  }
   fftPadFilter->Update();
+  std::cout << "  ------------" << std::endl;
+  fftPadFilter->Print(std::cout);
+  std::cout << "  ------------" << std::endl;
   handle = fftPadFilter->GetOutput();
 
   auto sizeOriginal = reader->GetOutput()->GetLargestPossibleRegion().GetSize();
@@ -98,6 +106,7 @@ int main( int argc, char *argv[])
     ( "outputFolder,o", po::value<std::string>()->required(), "Outputfolder path. A number of images will be generated depending on levels and bands." )
     ( "outputExtension,e", po::value<std::string>()->default_value("nrrd"), "Output extension." )
     ( "dimension,d", po::value<unsigned int>()->required(), "Use imageInfo if needed." )
+    ( "sizeGreatestPrimeFactor,g", po::value<int>()->default_value(-1), "Specify the sizeGreatestPrimeFactor to pad the image. If -1 it will be computed internally. Example: Set to 2 for the output size to be power of 2." )
     ( "pixelType,p", po::value<std::string>()->required(), "Use imageInfo if needed." )
     ( "boundaryCondition,b", po::value<std::string>()->default_value("ZeroFluxNeumann"), "Boundary Condition." )
     ( "visualize,t", po::bool_switch()->default_value(false), "Visualize using vtk based viewer.");
@@ -120,6 +129,7 @@ int main( int argc, char *argv[])
   const std::string outputFolder = vm["outputFolder"].as<std::string>();
   const std::string outputExtension = vm["outputExtension"].as<std::string>();
   const unsigned int dimension = vm["dimension"].as<unsigned int>();
+  const int sizeGreatestPrimeFactor = vm["sizeGreatestPrimeFactor"].as<int>();
   const std::string pixelType = vm["pixelType"].as<std::string>();
   const std::string boundaryConditionName = vm["boundaryCondition"].as<std::string>();
   const bool visualize = vm["visualize"].as<bool>();
@@ -128,65 +138,68 @@ int main( int argc, char *argv[])
   itk::NumberToString< double > n2s;
   const fs::path inputImageStem_path = fs::path(inputImage).stem();
   const fs::path outputFolder_path = fs::absolute(fs::path(outputFolder));
+  const std::string sizeGreatestPrimeFactorString =
+    (sizeGreatestPrimeFactor != -1) ? ("withFactor" + std::to_string(sizeGreatestPrimeFactor) ) : "";
+  const std::string appendString = "_fftPad" + boundaryConditionName + sizeGreatestPrimeFactorString;
   const std::string outputImage = (outputFolder_path /
       fs::path(inputImageStem_path.string() +
-        "_fftPad" + boundaryConditionName + "." + outputExtension)).string();
+        appendString + "." + outputExtension)).string();
 
   if(pixelType == "double" ) {
     if(dimension == 3) {
       using ImageType = itk::Image<double, 3>;
-      pad_image<ImageType>(inputImage, outputImage, boundaryConditionName, visualize);
+      pad_image<ImageType>(inputImage, outputImage, boundaryConditionName, sizeGreatestPrimeFactor, visualize);
     } else if (dimension == 2) {
       using ImageType = itk::Image<double, 2>;
-      pad_image<ImageType>(inputImage, outputImage, boundaryConditionName, visualize);
+      pad_image<ImageType>(inputImage, outputImage, boundaryConditionName, sizeGreatestPrimeFactor, visualize);
     }
   } else if(pixelType == "float" ) {
     if(dimension == 3) {
       using ImageType = itk::Image<float, 3>;
-      pad_image<ImageType>(inputImage, outputImage, boundaryConditionName, visualize);
+      pad_image<ImageType>(inputImage, outputImage, boundaryConditionName, sizeGreatestPrimeFactor, visualize);
     } else if (dimension == 2) {
       using ImageType = itk::Image<float, 2>;
-      pad_image<ImageType>(inputImage, outputImage, boundaryConditionName, visualize);
+      pad_image<ImageType>(inputImage, outputImage, boundaryConditionName, sizeGreatestPrimeFactor, visualize);
     }
   } else if(pixelType == "unsigned char" ) {
     if(dimension == 3) {
       using ImageType = itk::Image<unsigned char, 3>;
-      pad_image<ImageType>(inputImage, outputImage, boundaryConditionName, visualize);
+      pad_image<ImageType>(inputImage, outputImage, boundaryConditionName, sizeGreatestPrimeFactor, visualize);
     } else if (dimension == 2) {
       using ImageType = itk::Image<unsigned char, 2>;
-      pad_image<ImageType>(inputImage, outputImage, boundaryConditionName, visualize);
+      pad_image<ImageType>(inputImage, outputImage, boundaryConditionName, sizeGreatestPrimeFactor, visualize);
     }
   } else if(pixelType == "short" ) {
     if(dimension == 3) {
       using ImageType = itk::Image<short, 3>;
-      pad_image<ImageType>(inputImage, outputImage, boundaryConditionName, visualize);
+      pad_image<ImageType>(inputImage, outputImage, boundaryConditionName, sizeGreatestPrimeFactor, visualize);
     } else if (dimension == 2) {
       using ImageType = itk::Image<short, 2>;
-      pad_image<ImageType>(inputImage, outputImage, boundaryConditionName, visualize);
+      pad_image<ImageType>(inputImage, outputImage, boundaryConditionName, sizeGreatestPrimeFactor, visualize);
     }
   } else if(pixelType == "int" ) {
     if(dimension == 3) {
       using ImageType = itk::Image<int, 3>;
-      pad_image<ImageType>(inputImage, outputImage, boundaryConditionName, visualize);
+      pad_image<ImageType>(inputImage, outputImage, boundaryConditionName, sizeGreatestPrimeFactor, visualize);
     } else if (dimension == 2) {
       using ImageType = itk::Image<int, 2>;
-      pad_image<ImageType>(inputImage, outputImage, boundaryConditionName, visualize);
+      pad_image<ImageType>(inputImage, outputImage, boundaryConditionName, sizeGreatestPrimeFactor, visualize);
     }
   } else if(pixelType == "int" ) {
     if(dimension == 3) {
       using ImageType = itk::Image<int, 3>;
-      pad_image<ImageType>(inputImage, outputImage, boundaryConditionName, visualize);
+      pad_image<ImageType>(inputImage, outputImage, boundaryConditionName, sizeGreatestPrimeFactor, visualize);
     } else if (dimension == 2) {
       using ImageType = itk::Image<int, 2>;
-      pad_image<ImageType>(inputImage, outputImage, boundaryConditionName, visualize);
+      pad_image<ImageType>(inputImage, outputImage, boundaryConditionName, sizeGreatestPrimeFactor, visualize);
     }
   } else if(pixelType == "short" ) {
     if(dimension == 3) {
       using ImageType = itk::Image<short, 3>;
-      pad_image<ImageType>(inputImage, outputImage, boundaryConditionName, visualize);
+      pad_image<ImageType>(inputImage, outputImage, boundaryConditionName, sizeGreatestPrimeFactor, visualize);
     } else if (dimension == 2) {
       using ImageType = itk::Image<short, 2>;
-      pad_image<ImageType>(inputImage, outputImage, boundaryConditionName, visualize);
+      pad_image<ImageType>(inputImage, outputImage, boundaryConditionName, sizeGreatestPrimeFactor, visualize);
     }
   } else {
     std::cout << "PixelType: " << pixelType << " is not supported" << std::endl;
